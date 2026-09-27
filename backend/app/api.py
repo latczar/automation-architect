@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from app.assess import assess_process
 from app.blueprint import Blueprint, build_blueprint
+from app.fresh import FreshPages
 from app.export_n8n import to_n8n
 from app.extract import extract_process
 from app.llm.base import LLMError, StructuredLLM
@@ -96,6 +97,9 @@ app = FastAPI(
 )
 
 # The front end is served separately in development.
+# Without this a deploy can be live and still look like the last one. See
+# app/fresh.py for why every version of the page looked identical to a browser.
+app.add_middleware(FreshPages)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

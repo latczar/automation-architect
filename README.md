@@ -121,7 +121,7 @@ dimensions is a 160KB file and a loop.
 
 ```bash
 cd backend
-.venv/Scripts/python -m pytest                   # 332 tests, no API calls
+.venv/Scripts/python -m pytest                   # 338 tests, no API calls
 .venv/Scripts/python scripts/eval.py             # the safety net, free and instant
 .venv/Scripts/python scripts/eval.py replay      # the pipeline, recorded answers
 .venv/Scripts/python scripts/eval.py playbooks   # retrieval, free and instant
