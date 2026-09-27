@@ -21,17 +21,15 @@ export function Verdicts({ graph, plan, selected, onSelect }: Props) {
     graph.steps.find((s) => s.id === id)?.name ?? id;
 
   // Picking a step in the diagram, or from "worth doing first", brings its
-  // verdict into view. Only when it is off screen: a card already in sight
-  // jumping about under the pointer is worse than not moving at all.
+  // verdict into view. "nearest" moves whichever container holds the card, and
+  // only if it has to: a card already in sight jumping about under the pointer
+  // is worse than not moving at all.
   const list = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!selected) return;
-    const card = list.current?.querySelector<HTMLElement>(`[data-step="${CSS.escape(selected)}"]`);
-    if (!card) return;
-    const box = card.getBoundingClientRect();
-    if (box.top < 72 || box.bottom > window.innerHeight) {
-      card.scrollIntoView({ block: "center" });
-    }
+    list.current
+      ?.querySelector<HTMLElement>(`[data-step="${CSS.escape(selected)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
   }, [selected]);
 
   // Anything needing attention first. A list that opens with six green rows

@@ -12,6 +12,8 @@ interface Props {
   onCopy: () => void;
   copying: boolean;
   copied: boolean;
+  /** Takes the reader to the questions, which live in the conversation. */
+  onQuestions: () => void;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * a project. "Your call" is kept apart from "to do" because a decision cannot
  * be delegated to whoever happens to be doing the typing.
  */
-export function BuildPlan({ tasks, onCopy, copying, copied }: Props) {
+export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions }: Props) {
   const done = tasks.filter((t) => t.status === "done").length;
   const left = tasks.length - done;
 
@@ -48,9 +50,9 @@ export function BuildPlan({ tasks, onCopy, copying, copied }: Props) {
                 </button>
               )}
               {task.action === "questions" && (
-                <a className="task__link" href="#questions">
+                <button className="linkish task__link" onClick={onQuestions}>
                   Go to the questions
-                </a>
+                </button>
               )}
             </div>
           </li>

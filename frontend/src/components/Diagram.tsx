@@ -11,10 +11,12 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { layoutGraph, NODE_HEIGHT } from "../layout";
+import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
 import { StepNode, type StepNodeData } from "./StepNode";
 import type { AutomationPlan, ProcessGraph } from "../types";
 
 const nodeTypes = { step: StepNode };
+const edgeTypes = { routed: RoutedEdge };
 
 // Never past full size. A three-step process would otherwise be blown up to
 // fill the box, and text at 180% looks like a mistake rather than a diagram.
@@ -102,7 +104,14 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
       labelBgBorderRadius: 4,
     }));
 
-    return { nodes: layoutGraph(raw, flowEdges), edges: flowEdges };
+    const laid = layoutGraph(raw, flowEdges);
+    const routed: FlowEdge[] = flowEdges.map((edge) => {
+      const route = laid.routes[edge.id];
+      const data: RoutedEdgeData = { points: route?.points ?? [], labelAt: route?.label ?? null };
+      return { ...edge, type: "routed", data };
+    });
+
+    return { nodes: laid.nodes, edges: routed };
   }, [graph, plan, selected]);
 
   // How tall the process is at full size, plus the fit padding and the margin
@@ -117,6 +126,7 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={FIT}
         proOptions={{ hideAttribution: false }}

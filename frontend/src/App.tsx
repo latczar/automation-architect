@@ -13,18 +13,12 @@ import {
   fetchShare,
   shareIdFromUrl,
 } from "./api";
-import { BuildPlan } from "./components/BuildPlan";
-import { Connections } from "./components/Connections";
-import { Contents, type Section } from "./components/Contents";
-import { Diagram } from "./components/Diagram";
-import { Effort } from "./components/Effort";
-import { Library, NoPlaybook } from "./components/Library";
-import { Overview } from "./components/Overview";
+import { Canvas, type Tab } from "./components/Canvas";
+import { Chat, type Round } from "./components/Chat";
+import { NoPlaybook } from "./components/Library";
 import { Playbook } from "./components/Playbook";
-import { Questions } from "./components/Questions";
-import { Verdicts } from "./components/Verdicts";
+import { SHORTEST, Start } from "./components/Start";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
-import { VERDICT_LABEL } from "./labels";
 import type {
   AnalyseResponse,
   Answer,
@@ -39,17 +33,35 @@ import type {
 /** The server caps these too. Slicing here keeps a 422 off the screen. */
 const MOST_ANSWERS = 12;
 
+const SOURCE = "https://github.com/latczar/automation-architect";
+
+/**
+ * Two screens. Before anything is sent, a single question and a box. After,
+ * a workbench: the conversation on one side and the blueprint on the other,
+ * after the chat-and-canvas layout the current assistants have settled on.
+ */
 export default function App() {
   const [description, setDescription] = useState("");
   const [examples, setExamples] = useState<Example[]>([]);
   const [replayCase, setReplayCase] = useState<string | undefined>();
+  const [rounds, setRounds] = useState<Round[]>([]);
+
+  // The last analysis that produced a map. Kept while a new one is worked out,
+  // so the blueprint has something to show, and kept if the new one fails.
   const [result, setResult] = useState<AnalyseResponse | null>(null);
+  // Bumped with every new result, so the blueprint starts fresh for it: the
+  // step ids change, and minutes typed against the old ones mean nothing.
+  const [version, setVersion] = useState(0);
+
   const [selected, setSelected] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("map");
+  // A phone shows one side at a time.
+  const [view, setView] = useState<"chat" | "blueprint">("chat");
+
   const [busy, setBusy] = useState(false);
-  // Whole seconds since the current request started, and whether it carries
-  // answers, so the wait can say what it is waiting for and for how long.
+  // Whole seconds since the current request started, so the wait can say how
+  // long it has been.
   const [elapsed, setElapsed] = useState(0);
-  const [again, setAgain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   // "copied" or "downloaded", so the message can say what actually happened.
@@ -58,24 +70,21 @@ export default function App() {
   // The retrieved article, if the corpus covers this job. Kept apart from the
   // analysis because it arrives separately and outlives it failing.
   const [playbook, setPlaybook] = useState<PlaybookResponse | null>(null);
+  // Which text the article was found for, so answering a question, which does
+  // not change the description, does not fetch the same article again.
+  const searched = useRef<string | null>(null);
   // Every article there is, so an empty match can be explained rather than
-  // looking like something broke. Empty if it fails to load, which hides both
-  // places it appears and costs nothing else.
+  // looking like something broke. Empty if it fails to load.
   const [library, setLibrary] = useState<LibraryArticle[]>([]);
 
-  // How the tools fit together and what is left to build. Asked for once the
-  // analysis is on screen, and simply left out if it fails: everything above
-  // it still stands on its own.
+  // How the tools fit together and what is left to build. Asked for once a map
+  // is on screen, and simply left out if it fails.
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
-
-  // So "describe your own" can put the cursor where the typing goes.
-  const box = useRef<HTMLTextAreaElement>(null);
 
   // Keyed by the question text, because ids are regenerated on every run and an
   // answer has to outlive the analysis that prompted it. Answers accumulate:
   // something said two rounds ago is still true now.
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [usedAnswers, setUsedAnswers] = useState<Answer[]>([]);
 
   const [effortInput, setEffortInput] = useState<EffortInput | null>(null);
   const [shared, setShared] = useState<SharedAnalysis | null>(null);
@@ -163,46 +172,64 @@ export default function App() {
           assessment_attempts: [],
           error: null,
         });
+        setVersion((v) => v + 1);
       })
       .catch((exc) => setError(exc instanceof Error ? exc.message : "Could not open that link."))
       .finally(() => setOpening(false));
   }, []);
 
-  async function run(given: Answer[] = []) {
+  /**
+   * Send one round to the model, or to a recording.
+   *
+   * The text and the recording are passed in rather than read from state,
+   * because the callers change both just before calling, and state set in the
+   * same event is not visible until the next render.
+   */
+  async function run(given: Answer[], text: string, replay: string | undefined) {
     setBusy(true);
-    setAgain(given.length > 0);
     setError(null);
-    setResult(null);
     setSelected(null);
     setShareUrl(null);
-    setShared(null);
-    setPlaybook(null);
+    setHandoff(null);
 
     // Its own request, deliberately not awaited with the others. Retrieval takes
     // about a second and needs no generation, so the article lands while the
     // slow half is still working and stays on screen if that half never
     // finishes at all, which on a bad afternoon is the only thing that arrives.
-    fetchPlaybook(description)
-      .then(setPlaybook)
-      .catch(() => setPlaybook(null));
+    if (searched.current !== text) {
+      searched.current = text;
+      setPlaybook(null);
+      fetchPlaybook(text)
+        .then(setPlaybook)
+        .catch(() => setPlaybook(null));
+    }
 
+    let outcome = "";
+    let failed = false;
     try {
       // Answering means going to the model. A recorded example replays one fixed
       // response, so replaying it would hand back the identical analysis and
       // look, reasonably enough, like the answers had been ignored.
-      const response = await analyse(
-        description,
-        given.length ? undefined : replayCase,
-        given,
-      );
-      setResult(response);
-      setUsedAnswers(response.ok ? given : []);
+      const response = await analyse(text, given.length ? undefined : replay, given);
+      if (response.graph) {
+        setResult(response);
+        setVersion((v) => v + 1);
+      }
       if (!response.ok && response.error) setError(response.error);
+      failed = !response.graph;
+      outcome = response.plan?.headline ?? response.error ?? "Mapped, but not judged.";
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Something went wrong.");
+      const message = exc instanceof Error ? exc.message : "Something went wrong.";
+      setError(message);
+      outcome = message;
+      failed = true;
     } finally {
       setBusy(false);
     }
+
+    setRounds((all) =>
+      all.map((round, i) => (i === all.length - 1 ? { ...round, outcome, failed } : round)),
+    );
   }
 
   /** Everything answered so far, trimmed and with the blanks dropped. */
@@ -211,6 +238,72 @@ export default function App() {
       .map(([question, answer]) => ({ question, answer: answer.trim() }))
       .filter((a) => a.answer.length > 0)
       .slice(0, MOST_ANSWERS);
+  }
+
+  /** The first round: a description, typed or from an example. */
+  function send(text: string, replay: string | undefined) {
+    if (text.trim().length < SHORTEST) return;
+    setRestored(false);
+    setResult(null);
+    setTab("map");
+    setView("chat");
+    setRounds([{ kind: "description", text, answers: [], outcome: null, failed: false }]);
+    run([], text, replay);
+  }
+
+  function startExample(example: Example) {
+    setDescription(example.description);
+    setAnswers({}); // A different process, so nothing said about the last one holds.
+    // Recorded examples replay from disk, so they work with no API key and
+    // cost nothing. Anything typed by hand goes to the model.
+    const replay = example.replayable ? example.id : undefined;
+    setReplayCase(replay);
+    send(example.description, replay);
+  }
+
+  function redraw() {
+    const given = answersGiven();
+    if (!given.length) return;
+    setRounds((all) => [
+      ...all,
+      { kind: "answers", text: "", answers: given, outcome: null, failed: false },
+    ]);
+    run(given, description, undefined);
+  }
+
+  /** Something the description left out, added to it and mapped again. */
+  function addDetail(detail: string) {
+    const added = detail.trim();
+    if (!added) return;
+    const text = `${description.trim()}\n\n${added}`;
+    setDescription(text);
+    setReplayCase(undefined); // The recording was of the words before this.
+    setRounds((all) => [
+      ...all,
+      { kind: "detail", text: added, answers: [], outcome: null, failed: false },
+    ]);
+    run(answersGiven(), text, undefined);
+  }
+
+  /** Back to the first screen, with nothing carried over. */
+  function reset() {
+    setRounds([]);
+    setResult(null);
+    setError(null);
+    setPlaybook(null);
+    searched.current = null;
+    setAnswers({});
+    setShared(null);
+    setShareUrl(null);
+    setHandoff(null);
+    setSelected(null);
+    setTab("map");
+    setView("chat");
+    setDescription("");
+    setReplayCase(undefined);
+    setRestored(false);
+    clearDraft();
+    if (shareIdFromUrl()) window.history.replaceState(null, "", "/");
   }
 
   async function exportWorkflow() {
@@ -279,492 +372,190 @@ export default function App() {
     }
   }
 
-  function useExample(example: Example) {
-    setDescription(example.description);
-    setPlaybook(null);
-    setRestored(false);
-    setAnswers({}); // A different process, so nothing said about the last one holds.
-    setUsedAnswers([]);
-    // Recorded examples replay from disk, so they work with no API key and
-    // cost nothing. Anything typed by hand goes to the model.
-    setReplayCase(example.replayable ? example.id : undefined);
-    setResult(null);
-    setError(null);
-    setShareUrl(null);
-  }
-
   // Stable, or the effort panel's reporting effect loops.
   const handleEffort = useCallback((effort: EffortInput | null) => {
     setEffortInput(effort);
     setShareUrl(null); // The numbers changed, so the old link is out of date.
   }, []);
 
-  const attempts = result
-    ? [...result.extraction_attempts, ...result.assessment_attempts]
-    : [];
-  const repairs = attempts.filter((a) => !a.ok);
+  /**
+   * Swap sides on a phone. The page is one long scroll there, so arriving at the
+   * other side halfway down it would be arriving in the middle of something.
+   */
+  function show(side: "chat" | "blueprint") {
+    setView(side);
+    if (window.matchMedia("(max-width: 820px)").matches) window.scrollTo({ top: 0 });
+  }
 
-  // The article has one place on the page, near the top, and keeps it. It
-  // arrives about a second after asking, long before the analysis, and moving
-  // it once the rest turns up would make the reader find it twice.
-  const article = playbook?.match ? (
-    <Playbook match={playbook.match} retriever={playbook.retriever} />
-  ) : playbook?.retriever && library.length > 0 ? (
-    <NoPlaybook library={library} />
-  ) : null;
+  /** From "worth doing first": the step, on the map, on whichever screen shows it. */
+  function pick(stepId: string) {
+    setSelected(stepId);
+    setTab("map");
+    show("blueprint");
+  }
 
-  // After a failure only a real match is worth keeping on screen. "No article
-  // for this job" under an error message is one more thing that went nowhere.
-  const early = busy ? article : playbook?.match ? article : null;
-
-  const given = answersGiven();
-
-  const sections: Section[] = result?.graph
-    ? [
-        { id: "summary", label: "Summary" },
-        { id: "steps", label: `Steps (${result.graph.steps.length})` },
-        ...(blueprint ? [{ id: "connects", label: "How it connects" }] : []),
-        ...(result.graph.questions.length > 0
-          ? [{ id: "questions", label: `Questions (${result.graph.questions.length})` }]
-          : []),
-        ...(blueprint
-          ? [{ id: "build", label: "Build it" }]
-          : result.plan
-            ? [{ id: "time", label: "Time it takes" }]
-            : []),
-      ]
-    : [];
+  function toQuestions() {
+    show("chat");
+    requestAnimationFrame(() =>
+      document.getElementById("questions")?.scrollIntoView({ block: "start" }),
+    );
+  }
 
   if (opening) {
     return (
-      <div className="page">
-        <p className="muted">Opening that link...</p>
+      <div className="app">
+        <p className="muted opening">Opening that link...</p>
       </div>
     );
   }
 
-  return (
-    <div className="page">
-      <header className="masthead">
-        <h1>Automation Architect</h1>
-        <p>
-          Work out what is safe to automate before anybody builds it, and how it
-          would fit together.
-        </p>
+  const started = rounds.length > 0 || Boolean(shared) || Boolean(result);
 
-        {/* How to use it, in the order it happens. Somebody arriving cold should
-            know what they will get back before they are asked to type anything. */}
-        <ol className="how">
-          <li>
-            <strong>Describe a job you do by hand</strong>
-            <span>A few sentences, the way you would explain it to a colleague.</span>
-          </li>
-          <li>
-            <strong>See which steps are safe to hand over</strong>
-            <span>Every step comes back as one of the three below, with its reasons.</span>
-          </li>
-          <li>
-            <strong>Take away a plan to build it</strong>
-            <span>A map of the tools it connects, a checklist, and a workflow for n8n.</span>
-          </li>
-        </ol>
+  if (!started) {
+    return (
+      <div className="app">
+        <header className="bar bar--start">
+          <span className="bar__brand">Automation Architect</span>
+          <a className="bar__link" href={SOURCE}>
+            Source on GitHub
+          </a>
+        </header>
 
-        {/* The colours are taught here, once, so the diagram and the list can
-            use them without explaining themselves every time. */}
-        <ul className="key">
-          <li className="key__item key__item--fully_automatable">
-            <strong>{VERDICT_LABEL.fully_automatable}</strong>
-            <span>A computer can do it with nobody watching.</span>
-          </li>
-          <li className="key__item key__item--automatable_with_control">
-            <strong>{VERDICT_LABEL.automatable_with_control}</strong>
-            <span>A computer can do it, once a person signs off or a limit applies.</span>
-          </li>
-          <li className="key__item key__item--human_required">
-            <strong>{VERDICT_LABEL.human_required}</strong>
-            <span>Judgement that should not be handed over.</span>
-          </li>
-        </ul>
+        {error && <p className="error start__error">{error}</p>}
 
-        <p className="key__rule">
-          A step that moves money, cannot be undone or carries legal weight never
-          comes back as &ldquo;runs itself&rdquo;. That rule is in the code, so the
-          model cannot argue its way past it.
-        </p>
-      </header>
-
-      {shared ? (
-        <section className="banner">
-          <strong>You are looking at a shared analysis.</strong> It was created on{" "}
-          {new Date(shared.created_at).toLocaleDateString("en-GB")} and the link stops
-          working on {new Date(shared.expires_at).toLocaleDateString("en-GB")}.{" "}
-          <a href="/">Analyse your own process instead.</a>
-        </section>
-      ) : (
-        <section className="composer">
-          {examples.length > 0 && (
-            <div className="tray">
-              <p className="tray__lead">
-                <strong>Start with an example</strong> or write your own. The examples are
-                made up, and replay instantly without an API key.
-              </p>
-              <div className="tray__cards">
-                {examples.map((example) => (
-                  <button
-                    key={example.id}
-                    className={`tray__card ${replayCase === example.id ? "tray__card--chosen" : ""}`}
-                    aria-pressed={replayCase === example.id}
-                    onClick={() => useExample(example)}
-                  >
-                    <span className="tray__tag">Example</span>
-                    <span className="tray__title">{example.label}</span>
-                    {example.shows && <span className="tray__shows">{example.shows}</span>}
-                  </button>
-                ))}
-                <button
-                  className="tray__card tray__card--own"
-                  onClick={() => {
-                    if (replayCase) {
-                      setDescription("");
-                      setReplayCase(undefined);
-                    }
-                    box.current?.focus();
-                  }}
-                >
-                  <span className="tray__tag">Your own</span>
-                  <span className="tray__title">Describe a job you do</span>
-                  <span className="tray__shows">Something repetitive, in your own words.</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          <textarea
-            ref={box}
-            aria-label="Describe the job"
-            value={description}
-            placeholder={
-              "Every morning I go through my emails looking for invoices. When I find " +
-              "one I download the PDF, read the total off it, and type that into our " +
-              "spreadsheet..."
-            }
-            onChange={(event) => {
-              setDescription(event.target.value);
-              setReplayCase(undefined);
-            }}
-            rows={6}
-            spellCheck
-          />
-
-          <div className="composer__actions">
-            <button onClick={() => run()} disabled={busy || description.trim().length < 20}>
-              {busy ? "Working through it..." : "Analyse this"}
-            </button>
-            {replayCase && (
-              <span className="composer__note">
-                Recorded example. Runs without an API key.
-              </span>
-            )}
-            {!replayCase && !busy && description.trim().length < 20 && (
-              <span className="composer__note">
-                A sentence or two is enough, or pick an example above.
-              </span>
-            )}
-            {restored && !replayCase && (
-              <span className="composer__note">
-                Picked up where you left off. Kept in this browser only.{" "}
-                <button
-                  className="linkish"
-                  onClick={() => {
-                    clearDraft();
-                    setDescription("");
-                    setAnswers({});
-                    setRestored(false);
-                  }}
-                >
-                  Clear it
-                </button>
-              </span>
-            )}
-          </div>
-
-          {library.length > 0 && (
-            <details className="library">
-              <summary>Articles it can match you to ({library.length})</summary>
-              <p className="library__lead">
-                A small written library, searched by meaning against what you type.
-                When one is close enough, it appears beside your process. They are
-                shown to you, not fed to the model that judges your process.
-              </p>
-              <Library articles={library} />
-            </details>
-          )}
-        </section>
-      )}
-
-      {error && <div className="error">{error}</div>}
-
-      {/* Before the analysis lands: the wait, and the article beside it in the
-          place it will stay once the rest arrives. */}
-      {!result?.graph && (busy || early) && (
-        <div className="overview">
-          {/* Ten to twenty seconds is a long time to look at a button that says
-              it is busy. This says what is happening, how long it usually takes
-              and how long it has been, which is most of what makes a wait
-              bearable. */}
-          {busy && (
-            <section className="card working" role="status">
-              <div className="working__bar" aria-hidden="true">
-                <span />
-              </div>
-              <p className="working__title">
-                {again ? "Working it out again with your answers" : "Working through your process"}
-                {elapsed > 0 && (
-                  <span className="working__clock" aria-hidden="true">
-                    {elapsed}s
-                  </span>
-                )}
-              </p>
-              <p className="working__note">
-                {elapsed < 30
-                  ? "It maps the steps, judges each one, then our checks go over every verdict. Usually 10 to 20 seconds."
-                  : "Taking longer than usual. If it runs out of time it stops and says so, rather than leaving you waiting."}
-              </p>
-            </section>
-          )}
-          {early}
-        </div>
-      )}
-
-      {repairs.length > 0 && (
-        <details className="repairs">
-          <summary>
-            The checker rejected {repairs.length}{" "}
-            {repairs.length === 1 ? "answer" : "answers"} and asked again
-          </summary>
-          {repairs.map((attempt, index) => (
-            <div key={index}>
-              <strong>Attempt {attempt.number}</strong>
-              <ul>
-                {attempt.errors.map((message, i) => (
-                  <li key={i}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </details>
-      )}
-
-      {/* Overview first, then the detail on demand: the answer and the article
-          at the top, every step and its reasoning below them, and what to do
-          next after that. The bar keeps all of it one click away. */}
-      {result?.graph && (
-        <main className="report">
-          <header className="report__head">
-            <div className="results__head">
-              <h2>{result.graph.title}</h2>
-              <div className="results__buttons">
-                {!shared && (
-                  <button
-                    className="secondary"
-                    onClick={makeShareLink}
-                    disabled={sharing}
-                    title="A link anyone can open. Expires after 30 days."
-                  >
-                    {sharing ? "Creating..." : "Share"}
-                  </button>
-                )}
-                <button
-                  className="secondary"
-                  onClick={exportWorkflow}
-                  disabled={exporting}
-                  title="Copies the workflow. Paste it onto an n8n canvas."
-                >
-                  {exporting ? "Building..." : handoff === "copied" ? "Copied" : "Copy for n8n"}
-                </button>
-              </div>
-            </div>
-
-            <p className="results__summary">{result.graph.summary}</p>
-
-            {usedAnswers.length > 0 && (
-              <div className="answered">
-                <strong>Worked out again using what you told it:</strong>
-                <ul>
-                  {usedAnswers.map((answer) => (
-                    <li key={answer.question}>
-                      <span className="answered__question">{answer.question}</span>
-                      {answer.answer}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {handoff && (
-              <p className="handoff">
-                {handoff === "copied" ? (
-                  <>
-                    On your clipboard. Open n8n, click the empty canvas and press{" "}
-                    <kbd>Ctrl</kbd>+<kbd>V</kbd>.{" "}
-                  </>
-                ) : (
-                  <>
-                    Your browser would not let the page use the clipboard, so the
-                    workflow downloaded instead. In n8n, use Import from File.{" "}
-                  </>
-                )}
-                Steps where you named the system arrive as real nodes and still
-                need their credentials. The rest are placeholders saying what
-                belongs there.{" "}
-                {handoff === "copied" && (
-                  <button className="linkish" onClick={downloadWorkflow}>
-                    Download the file instead
-                  </button>
-                )}
-              </p>
-            )}
-
-            {shareUrl && (
-              <div className="sharebox">
-                <div className="sharebox__row">
-                  <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} />
-                  <button onClick={copyLink}>{copied ? "Copied" : "Copy"}</button>
-                </div>
-                <p className="sharebox__note">
-                  Anyone with this link can read the analysis, so treat it as public.
-                  Do not share one containing customer names or anything confidential.
-                  {shareExpiry && (
-                    <> It stops working on {new Date(shareExpiry).toLocaleDateString("en-GB")}.</>
-                  )}
-                </p>
-              </div>
-            )}
-          </header>
-
-          <Contents sections={sections} />
-
-          <div className="overview" id="summary">
-            {result.plan ? (
-              <Overview graph={result.graph} plan={result.plan} onPick={setSelected} />
-            ) : (
-              <section className="card answer">
-                <span className="card__label">The answer</span>
-                <p className="muted">
-                  The process was mapped, but the judgement stage did not complete.
-                </p>
-              </section>
-            )}
-            {article}
-          </div>
-
-          <section className="steps" id="steps">
-            <header className="section__head">
-              <h2>Step by step</h2>
-              <p>
-                Anything that needs you comes first. Click a step in the diagram to
-                find out why it got its verdict.
-              </p>
-            </header>
-
-            <div className="results">
-              <div className="results__diagram">
-                <Diagram
-                  graph={result.graph}
-                  plan={result.plan}
-                  selected={selected}
-                  onSelect={setSelected}
-                />
-              </div>
-
-              <div className="results__panel">
-                {result.plan && (
-                  <Verdicts
-                    graph={result.graph}
-                    plan={result.plan}
-                    selected={selected}
-                    onSelect={setSelected}
-                  />
-                )}
-              </div>
-            </div>
-          </section>
-
-          {blueprint && <Connections blueprint={blueprint} />}
-
-          {result.graph.questions.length > 0 && (
-            <Questions
-              questions={result.graph.questions}
-              readOnly={Boolean(shared)}
-              answers={answers}
-              onAnswer={(question, answer) =>
-                setAnswers((current) => ({ ...current, [question]: answer }))
-              }
-              given={given.length}
-              busy={busy}
-              onRun={() => run(given)}
-            />
-          )}
-
-          <div className="next">
-            {blueprint && (
-              <BuildPlan
-                tasks={blueprint.tasks}
-                onCopy={exportWorkflow}
-                copying={exporting}
-                copied={handoff === "copied"}
-              />
-            )}
-
-            {result.plan && (
-              <section className="card time" id="time">
-                <h2>Time it takes</h2>
-                <Effort
-                  graph={result.graph}
-                  plan={result.plan}
-                  initial={shared?.effort ?? null}
-                  onChange={handleEffort}
-                />
-              </section>
-            )}
-          </div>
-        </main>
-      )}
-
-      <footer className="footer">
-        {/* "none" is the placeholder on a response that never reached a model,
-            and "Answered by none" is a sentence no reader should be shown. */}
-        {result && result.model !== "none" && (
-          <span>{answeredBy(result.model)} </span>
-        )}
-        <a href="https://github.com/latczar/automation-architect">Source on GitHub</a>
-      </footer>
-    </div>
-  );
-}
-
-/**
- * Who produced the analysis, in words a reader would use.
- *
- * The server names its clients for developers: "recording(gemini:gemini-3.5-
- * flash-lite)" means the local wrapper that saves each response, around the
- * Gemini client, around a model id. A reader wants "Gemini 3.5 Flash-Lite".
- */
-function answeredBy(model: string): string {
-  if (model === "a shared link") return "Opened from a shared link.";
-
-  const inner = model.replace(/^recording\((.*)\)$/, "$1");
-  if (inner.startsWith("replay:")) return "Answered by a recorded example, not a live model.";
-
-  if (inner.startsWith("gemini:")) {
-    const name = inner
-      .slice("gemini:".length)
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
-      .replace(" Flash Lite", " Flash-Lite");
-    return `Answered by ${name}.`;
+        <Start
+          description={description}
+          onChange={(text) => {
+            setDescription(text);
+            setReplayCase(undefined);
+          }}
+          onSend={() => send(description, replayCase)}
+          examples={examples}
+          onExample={startExample}
+          restored={restored}
+          onClearDraft={() => {
+            clearDraft();
+            setDescription("");
+            setAnswers({});
+            setRestored(false);
+          }}
+          library={library}
+        />
+      </div>
+    );
   }
 
-  return `Answered by ${inner}.`;
+  // After a failure only a real match is worth keeping on screen. "No article
+  // for this job" under an error message is one more thing that went nowhere.
+  const article = playbook?.match ? (
+    <Playbook match={playbook.match} retriever={playbook.retriever} />
+  ) : playbook?.retriever && library.length > 0 && (busy || result?.graph) ? (
+    <NoPlaybook library={library} />
+  ) : null;
+
+  const graph = result?.graph ?? null;
+
+  return (
+    <div className={`app work work--${view}`}>
+      <header className="bar">
+        <button className="bar__brand bar__home" onClick={reset} title="Start again">
+          Automation Architect
+        </button>
+
+        <div className="bar__switch" role="group" aria-label="Show">
+          <button aria-pressed={view === "chat"} onClick={() => show("chat")}>
+            Conversation
+          </button>
+          <button
+            aria-pressed={view === "blueprint"}
+            onClick={() => show("blueprint")}
+            disabled={!graph}
+          >
+            Blueprint
+          </button>
+        </div>
+
+        <div className="bar__end">
+          <button className="secondary bar__new" onClick={reset}>
+            New process
+          </button>
+          <a className="bar__link" href={SOURCE}>
+            GitHub
+          </a>
+        </div>
+      </header>
+
+      <div className="work__body">
+        <Chat
+          rounds={rounds}
+          busy={busy}
+          elapsed={elapsed}
+          error={error}
+          result={result}
+          article={article}
+          shared={shared}
+          answers={answers}
+          onAnswer={(question, answer) =>
+            setAnswers((current) => ({ ...current, [question]: answer }))
+          }
+          given={answersGiven().length}
+          onRedraw={redraw}
+          onDetail={addDetail}
+          onPick={pick}
+          onShowBlueprint={() => show("blueprint")}
+        />
+
+        {graph ? (
+          <Canvas
+            key={version}
+            graph={graph}
+            plan={result?.plan ?? null}
+            blueprint={blueprint}
+            tab={tab}
+            onTab={setTab}
+            selected={selected}
+            onSelect={setSelected}
+            busy={busy}
+            readOnly={Boolean(shared)}
+            onShare={makeShareLink}
+            sharing={sharing}
+            shareUrl={shareUrl}
+            shareExpiry={shareExpiry}
+            onCopyLink={copyLink}
+            linkCopied={copied}
+            onCopy={exportWorkflow}
+            copying={exporting}
+            handoff={handoff}
+            onDownload={downloadWorkflow}
+            effort={shared?.effort ?? null}
+            onEffort={handleEffort}
+            onQuestions={toQuestions}
+          />
+        ) : (
+          <section className="canvas canvas--empty" aria-label="Blueprint">
+            {busy ? (
+              <div className="ghost" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+                <p>Your map appears here</p>
+              </div>
+            ) : (
+              <div className="canvas__none">
+                <p>No map this time.</p>
+                <p className="muted">
+                  The reply says what went wrong. Try again, or start from one of the
+                  examples.
+                </p>
+                <button className="secondary" onClick={reset}>
+                  Back to the start
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    </div>
+  );
 }

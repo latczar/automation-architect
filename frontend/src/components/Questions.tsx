@@ -23,11 +23,11 @@ interface Props {
 export function Questions({ questions, readOnly, answers, onAnswer, given, busy, onRun }: Props) {
   return (
     <section className="card questions" id="questions">
-      <h2>Before you build</h2>
+      <h3>Questions it could not answer from your description</h3>
       {!readOnly && (
         <p className="questions__lead">
-          Answer any of these and it will work the process out again, treating what
-          you say as fact rather than as a suggestion.
+          Answer any of them and the map is redrawn, treating what you say as fact
+          rather than as a suggestion.
         </p>
       )}
 
@@ -83,7 +83,7 @@ export function Questions({ questions, readOnly, answers, onAnswer, given, busy,
         <button className="questions__again" onClick={onRun} disabled={busy}>
           {busy
             ? "Working through it again..."
-            : `Analyse again with ${given} ${given === 1 ? "answer" : "answers"}`}
+            : `Redraw the map with ${given} ${given === 1 ? "answer" : "answers"}`}
         </button>
       )}
     </section>

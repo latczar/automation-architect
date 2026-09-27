@@ -58,33 +58,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 48px 16px 64px;
-}
-
-.masthead {
-  margin-bottom: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.masthead h1 {
-  margin: 0 0 10px;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  letter-spacing: -0.028em;
-  line-height: 1.1;
-}
-
-.masthead p {
-  margin: 0;
-  color: var(--muted);
-  max-width: 58ch;
-  font-size: 1.0625rem;
-  text-wrap: balance;
-}
-
 /* How to use it, in the order it happens. */
 .how {
   counter-reset: how;
@@ -197,51 +170,6 @@ body {
   color: var(--human);
 }
 
-.masthead .key__rule {
-  margin-top: 12px;
-  max-width: 72ch;
-  font-size: 0.875rem;
-}
-
-/* Composer ---------------------------------------------------------------- */
-
-.composer {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  box-shadow: var(--shadow);
-}
-
-.composer textarea {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  font: inherit;
-  color: inherit;
-  background: var(--bg);
-  resize: vertical;
-}
-
-.composer textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.composer__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.composer__note {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
 button {
   font: inherit;
   font-weight: 500;
@@ -273,77 +201,6 @@ button:focus-visible {
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-/* Examples as cards to pick from, above the box, because clicking one is the
-   quickest way in and it should not be the last thing on the screen. */
-.tray {
-  margin-bottom: 14px;
-}
-
-.tray__lead {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.tray__lead strong {
-  color: var(--text);
-}
-
-.tray__cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.tray__card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 400;
-  text-align: left;
-}
-
-.tray__card:hover:not(:disabled) {
-  border-color: var(--accent);
-  filter: none;
-}
-
-.tray__card--chosen {
-  border-color: var(--accent);
-  background: var(--auto-bg);
-}
-
-.tray__card--own {
-  border-style: dashed;
-  border-left: 4px solid var(--muted);
-}
-
-.tray__tag {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.tray__title {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.tray__shows {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.4;
 }
 
 /* Feedback ---------------------------------------------------------------- */
@@ -481,100 +338,6 @@ button:disabled {
   color: var(--muted);
 }
 
-.report {
-  margin-top: 32px;
-}
-
-/* Anything the contents bar jumps to stops clear of the bar, not under it. */
-.report [id] {
-  scroll-margin-top: 72px;
-}
-
-.report__head {
-  margin-bottom: 16px;
-}
-
-/* Where everything is, pinned to the top once the page scrolls. */
-.contents {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  gap: 4px;
-  margin: 0 -16px 16px;
-  padding: 10px 16px;
-  overflow-x: auto;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  scrollbar-width: none;
-}
-
-.contents__link {
-  flex: 0 0 auto;
-  padding: 5px 12px;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.contents__link:hover {
-  color: var(--text);
-  background: var(--unclear-bg);
-}
-
-.contents__link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.contents__link--current {
-  color: var(--surface);
-  background: var(--accent);
-}
-
-.contents__link--current:hover {
-  color: var(--surface);
-  background: var(--accent);
-}
-
-/* Four links in a phone's width without the last one scrolling out of sight. */
-@media (max-width: 480px) {
-  .contents {
-    gap: 2px;
-  }
-
-  .contents__link {
-    padding: 5px 9px;
-    font-size: 0.8125rem;
-  }
-}
-
-/* The answer and the article, side by side, above everything else. Flex
-   rather than grid so either one alone takes the whole row. */
-.overview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-  margin-top: 20px;
-}
-
-.report .overview {
-  margin-top: 0;
-}
-
-.overview > * {
-  flex: 1 1 320px;
-  margin: 0;
-}
-
-.overview > :first-child {
-  flex-grow: 1.35;
-}
-
 .answer__headline {
   margin: 6px 0 14px;
   font-size: 1.05rem;
@@ -604,10 +367,6 @@ button:disabled {
 
 .answer__next .linkish {
   font-weight: 500;
-}
-
-.steps {
-  margin-top: 36px;
 }
 
 .section__head h2 {
@@ -1021,67 +780,6 @@ button:disabled {
   }
 }
 
-.results {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
-  gap: 24px;
-  margin-top: 16px;
-  align-items: start;
-}
-
-/* What to do next: the questions, and the time it takes, side by side. */
-.next {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
-  gap: 24px;
-  margin-top: 36px;
-  align-items: start;
-}
-
-/* On its own when there are no questions, and no wider than it reads well. */
-.next > .time:only-child {
-  max-width: 560px;
-}
-
-@media (max-width: 900px) {
-  .next {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 900px) {
-  .results {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* The verdict panel is usually far taller than the diagram. Pinning the diagram
-   keeps it in view while the reader works down the list, instead of leaving them
-   scrolling past a column of nothing. */
-.results__diagram {
-  position: sticky;
-  top: 72px;
-}
-
-@media (max-width: 900px) {
-  .results__diagram {
-    position: static;
-  }
-}
-
-.report__head h2 {
-  margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
-}
-
-.results__summary {
-  margin: 8px 0 18px;
-  color: var(--muted);
-  max-width: 68ch;
-}
-
 /* As tall as the process needs, and never taller than the window leaves room
    for, because it is pinned beside the list and has to be seen whole. */
 .diagram {
@@ -1092,6 +790,22 @@ button:disabled {
   background: var(--surface);
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+/* A branch's condition, placed where the layout left room for it. Absolute,
+   because React Flow positions these by transform in its own overlay. */
+.edge-label {
+  position: absolute;
+  max-width: 180px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
 }
 
 /* On a phone the steps fill the width, and the zoom buttons land on top of the
@@ -1435,7 +1149,6 @@ button:disabled {
   font-size: 1rem;
 }
 
-
 /* Says plainly that this is a library article about the job in general, not a
    reading of what the person wrote. Conflating the two is the failure mode of
    every retrieval feature ever shipped. */
@@ -1589,12 +1302,6 @@ button:disabled {
   margin-top: 0;
 }
 
-/* Questions --------------------------------------------------------------- */
-
-.report > .questions {
-  margin-top: 36px;
-}
-
 .questions__list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1694,66 +1401,8 @@ button:disabled {
   width: 100%;
 }
 
-/* What the last run was told, so a changed answer explains a changed process. */
-.answered {
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  font-size: 0.85rem;
-}
-
-.answered ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-}
-
-.answered li {
-  margin-top: 4px;
-}
-
-.answered__question {
-  display: block;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 .muted {
   color: var(--muted);
-}
-
-.footer {
-  margin-top: 48px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.footer a {
-  color: var(--accent);
-}
-
-/* Title and actions share a line; the summary gets the full width underneath.
-   The previous version put the summary alongside the buttons, which left the
-   heading wrapping inside a 260px column next to a large empty gap. */
-.results__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.results__head h2 {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.results__buttons {
-  display: flex;
-  gap: 8px;
-  flex: 0 0 auto;
 }
 
 .secondary {
@@ -1895,27 +1544,6 @@ button:disabled {
   font-size: 0.85rem;
 }
 
-/* Sharing ----------------------------------------------------------------- */
-
-.banner {
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: 8px;
-  background: var(--surface);
-  font-size: 0.9rem;
-}
-
-.banner a {
-  color: var(--accent);
-}
-
-.results__buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .sharebox {
   margin: 0 0 16px;
   padding: 12px 14px;
@@ -1985,4 +1613,814 @@ button:disabled {
 .linkish:hover {
   filter: none;
   text-decoration: none;
+}
+
+/* The hidden attribute has to win over any display a class sets, or a tab
+   panel laid out as a grid shows through while "hidden". */
+[hidden] {
+  display: none !important;
+}
+
+/* App shell ---------------------------------------------------------------- */
+
+.app {
+  min-height: 100vh;
+}
+
+.opening {
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.bar--start {
+  border-bottom-color: transparent;
+  background: transparent;
+}
+
+.bar__brand {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.bar__home {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.bar__home:hover:not(:disabled) {
+  color: var(--accent);
+  filter: none;
+}
+
+.bar__end {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.bar__link {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.bar--start .bar__link {
+  margin-left: auto;
+}
+
+.bar__new {
+  padding: 6px 14px;
+  font-size: 0.875rem;
+}
+
+/* Conversation or blueprint, on a screen too narrow for both. */
+.bar__switch {
+  display: none;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--unclear-bg);
+}
+
+.bar__switch button {
+  flex: 1;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.bar__switch button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* Start -------------------------------------------------------------------- */
+
+.start {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(24px, 9vh, 96px) 16px 64px;
+}
+
+.start__error {
+  max-width: 728px;
+  margin: 16px auto 0;
+}
+
+.start__title {
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.start__lead {
+  max-width: 52ch;
+  margin: 12px auto 24px;
+  color: var(--muted);
+  font-size: 1.0625rem;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* The box, drawn the way chat assistants draw theirs: one surface with the
+   send button inside it, so there is exactly one obvious thing to do. */
+.prompt {
+  padding: 14px 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.prompt:focus-within {
+  border-color: var(--accent);
+}
+
+.prompt textarea,
+.detail textarea {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  resize: none;
+}
+
+.prompt textarea {
+  min-height: 96px;
+}
+
+.prompt__foot,
+.detail__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prompt__hint,
+.detail__hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.prompt__send {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.prompt__send svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Examples to start from, as cards under the box. */
+.starters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.starter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+
+.starter:hover:not(:disabled) {
+  border-color: var(--accent);
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.starter--own {
+  border-style: dashed;
+}
+
+.starter__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.starter__shows {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.starter__tag {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Everything else there is to know, below the fold for whoever wants it. */
+.explain {
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.explain .how {
+  margin-top: 0;
+}
+
+.explain .key__rule {
+  max-width: 72ch;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.explain .library {
+  margin-top: 18px;
+}
+
+/* Workbench ---------------------------------------------------------------- */
+
+/* One screen high, with the conversation and the blueprint scrolling apart. */
+.work {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.work__body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+@media (min-width: 1400px) {
+  .work__body {
+    grid-template-columns: 440px minmax(0, 1fr);
+  }
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.chat__scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 16px 24px;
+  overflow-y: auto;
+}
+
+.chat__anchor {
+  height: 0;
+  scroll-margin-top: 8px;
+}
+
+.chat__shared {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+
+/* What the person sent, on the right, as in every messaging app. */
+.you {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.you p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.you ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.you li + li {
+  margin-top: 4px;
+}
+
+.you--folded p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.you__more {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+.you__more:hover:not(:disabled) {
+  filter: none;
+  text-decoration: none;
+}
+
+.you__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.you__question {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.reply {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reply__who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.reply__who::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.reply--past p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.reply--failed p {
+  color: var(--guard);
+}
+
+.reply__error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--guard);
+  border-radius: 8px;
+  background: var(--guard-bg);
+  color: var(--guard);
+  font-size: 0.9rem;
+}
+
+.reply__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+/* Only on a phone, where the blueprint is on the other side of the switch. */
+.reply__see {
+  display: none;
+}
+
+.reply .working {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.reply .repairs {
+  margin: 0;
+}
+
+.questions h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+/* Adding what the description left out, pinned to the foot of the column. */
+.detail {
+  flex: 0 0 auto;
+  margin: 0 12px 12px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.detail:focus-within {
+  border-color: var(--accent);
+}
+
+.detail textarea {
+  font-size: 0.9rem;
+}
+
+.detail .prompt__send {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.canvas {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.canvas__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 8px;
+}
+
+.canvas__title h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.canvas__title p {
+  display: -webkit-box;
+  max-width: 70ch;
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.875rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.canvas__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.canvas > .handoff,
+.canvas > .sharebox {
+  margin: 4px 20px 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 9px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.tabs__tab:hover:not(:disabled) {
+  color: var(--text);
+  filter: none;
+}
+
+.tabs__tab:active:not(:disabled) {
+  transform: none;
+}
+
+.tabs__tab--current {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tabs__count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--unclear-bg);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.canvas__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* The old map stays in view while a new one is worked out, faded so it is
+   plainly the old one. */
+.canvas__body--stale > [role="tabpanel"] {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.canvas__redrawing {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 6;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* The map beside the reasons for it, each scrolling on its own. */
+.maptab {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  height: 100%;
+}
+
+.maptab__diagram {
+  min-height: 0;
+  padding: 12px;
+}
+
+.maptab__diagram .diagram {
+  height: 100%;
+  min-height: 360px;
+}
+
+.maptab__list {
+  min-height: 0;
+  padding: 12px 16px 24px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.maptab__lead {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tabpanel {
+  max-width: 1100px;
+  padding: 20px;
+}
+
+.tabpanel .connects {
+  margin-top: 0;
+}
+
+.time {
+  max-width: 640px;
+}
+
+.canvas--empty {
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+
+/* Where the map will be, while the first one is worked out. */
+.ghost {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.ghost span {
+  width: 220px;
+  height: 54px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  animation: ghost 1.4s ease-in-out infinite;
+}
+
+.ghost span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ghost span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.ghost span:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+.ghost p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@keyframes ghost {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost span {
+    animation: none;
+  }
+}
+
+.canvas__none {
+  max-width: 360px;
+  padding: 24px;
+  text-align: center;
+}
+
+.canvas__none p:first-child {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* A desktop too narrow for the map and the reasons side by side stacks them,
+   and the panel scrolls as one. */
+@media (max-width: 1100px) {
+  .maptab {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .maptab__diagram .diagram {
+    height: 440px;
+  }
+
+  .maptab__list {
+    overflow: visible;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+/* A phone: one side at a time, and the page scrolls as an ordinary page. */
+@media (max-width: 820px) {
+  .work {
+    height: auto;
+    overflow: visible;
+  }
+
+  .work__body {
+    display: block;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+  }
+
+  .bar__switch {
+    display: flex;
+    order: 3;
+    width: 100%;
+  }
+
+  .bar__end .bar__link {
+    display: none;
+  }
+
+  .work--chat .canvas,
+  .work--blueprint .chat {
+    display: none;
+  }
+
+  .chat {
+    border-right: 0;
+  }
+
+  .chat__scroll {
+    overflow: visible;
+  }
+
+  .detail {
+    position: sticky;
+    bottom: 12px;
+  }
+
+  .reply__see {
+    display: block;
+    width: 100%;
+  }
+
+  .canvas__head {
+    flex-direction: column;
+    padding: 14px 16px 6px;
+  }
+
+  .canvas > .handoff,
+  .canvas > .sharebox {
+    margin: 4px 16px 8px;
+  }
+
+  .tabs {
+    padding: 0 8px;
+  }
+
+  .canvas__body {
+    overflow: visible;
+  }
+
+  .maptab__diagram .diagram {
+    height: min(var(--diagram-fits, 520px), 70vh);
+  }
+
+  .tabpanel {
+    padding: 16px;
+  }
+
+  .canvas--empty {
+    min-height: 60vh;
+  }
 }

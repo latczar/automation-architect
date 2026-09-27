@@ -69,10 +69,8 @@ export function Overview({ graph, plan, onPick }: Props) {
           )}
           {questions > 0 && (
             <li>
-              <a href="#questions">
-                {questions} {questions === 1 ? "question" : "questions"}
-              </a>{" "}
-              could change this. Answering redraws the map.
+              {questions} {questions === 1 ? "question" : "questions"} below could change
+              this. Answering redraws the map.
             </li>
           )}
         </ul>
