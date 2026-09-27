@@ -154,8 +154,53 @@ export interface AnalyseResponse {
 export interface Example {
   id: string;
   label: string;
+  /** One line on what the example is good for showing. */
+  shows?: string;
   description: string;
   replayable: boolean;
+}
+
+/** One step, and what it turns into in the workflow. Mirrors app/blueprint.py. */
+export interface Hookup {
+  step_id: string;
+  name: string;
+  kind: StepKind;
+  verdict: Verdict | null;
+  node: string | null;
+  node_type: string;
+  gate: "approval" | "limit" | null;
+  limit: string | null;
+  approver: string | null;
+}
+
+export interface Place {
+  id: string;
+  name: string;
+  category: string;
+  notes: string | null;
+  steps: Hookup[];
+  node: string | null;
+  setup: string;
+}
+
+export interface Task {
+  status: "done" | "todo" | "decide";
+  title: string;
+  detail: string;
+  action: "copy" | "questions" | null;
+}
+
+export interface Blueprint {
+  trigger: string;
+  trigger_node: string;
+  trigger_type: string;
+  watches: string | null;
+  places: Place[];
+  inside: Hookup[];
+  approvals: Hookup[];
+  with_you: Hookup[];
+  unclear: Hookup[];
+  tasks: Task[];
 }
 
 export type Period = "day" | "working_day" | "week" | "month";

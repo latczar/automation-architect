@@ -2,6 +2,7 @@ import type {
   AnalyseResponse,
   Answer,
   AutomationPlan,
+  Blueprint,
   EffortInput,
   EffortSummary,
   Example,
@@ -69,6 +70,20 @@ export async function fetchPlaybook(description: string): Promise<PlaybookRespon
     body: JSON.stringify({ description }),
   });
   if (!response.ok) throw new Error(`No article (${response.status}).`);
+  return response.json();
+}
+
+/** How the tools fit together and what is left to build, for what is on screen. */
+export async function fetchBlueprint(
+  graph: ProcessGraph,
+  plan: AutomationPlan | null,
+): Promise<Blueprint> {
+  const response = await fetch("/api/blueprint", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ graph, plan }),
+  });
+  if (!response.ok) throw new Error(`Could not work out the build plan (${response.status}).`);
   return response.json();
 }
 

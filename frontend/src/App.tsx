@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   analyse,
@@ -6,12 +6,15 @@ import {
   copyToClipboard,
   createShare,
   download,
+  fetchBlueprint,
   fetchExamples,
   fetchLibrary,
   fetchPlaybook,
   fetchShare,
   shareIdFromUrl,
 } from "./api";
+import { BuildPlan } from "./components/BuildPlan";
+import { Connections } from "./components/Connections";
 import { Contents, type Section } from "./components/Contents";
 import { Diagram } from "./components/Diagram";
 import { Effort } from "./components/Effort";
@@ -25,6 +28,7 @@ import { VERDICT_LABEL } from "./labels";
 import type {
   AnalyseResponse,
   Answer,
+  Blueprint,
   EffortInput,
   Example,
   LibraryArticle,
@@ -59,6 +63,14 @@ export default function App() {
   // places it appears and costs nothing else.
   const [library, setLibrary] = useState<LibraryArticle[]>([]);
 
+  // How the tools fit together and what is left to build. Asked for once the
+  // analysis is on screen, and simply left out if it fails: everything above
+  // it still stands on its own.
+  const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
+
+  // So "describe your own" can put the cursor where the typing goes.
+  const box = useRef<HTMLTextAreaElement>(null);
+
   // Keyed by the question text, because ids are regenerated on every run and an
   // answer has to outlive the analysis that prompted it. Answers accumulate:
   // something said two rounds ago is still true now.
@@ -75,6 +87,19 @@ export default function App() {
   // Shown only when something was actually brought back, so the notice is news
   // rather than furniture.
   const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    setBlueprint(null);
+    if (!result?.graph) return;
+
+    let current = true;
+    fetchBlueprint(result.graph, result.plan)
+      .then((built) => current && setBlueprint(built))
+      .catch(() => current && setBlueprint(null));
+    return () => {
+      current = false;
+    };
+  }, [result]);
 
   // Counted from the clock rather than by adding one a tick, because a
   // background tab slows its timers down and the count would drift.
@@ -298,10 +323,15 @@ export default function App() {
     ? [
         { id: "summary", label: "Summary" },
         { id: "steps", label: `Steps (${result.graph.steps.length})` },
+        ...(blueprint ? [{ id: "connects", label: "How it connects" }] : []),
         ...(result.graph.questions.length > 0
           ? [{ id: "questions", label: `Questions (${result.graph.questions.length})` }]
           : []),
-        ...(result.plan ? [{ id: "time", label: "Time it takes" }] : []),
+        ...(blueprint
+          ? [{ id: "build", label: "Build it" }]
+          : result.plan
+            ? [{ id: "time", label: "Time it takes" }]
+            : []),
       ]
     : [];
 
@@ -318,9 +348,26 @@ export default function App() {
       <header className="masthead">
         <h1>Automation Architect</h1>
         <p>
-          Work out what is safe to automate before anybody builds it. Describe
-          something you do by hand, and every step comes back as one of three.
+          Work out what is safe to automate before anybody builds it, and how it
+          would fit together.
         </p>
+
+        {/* How to use it, in the order it happens. Somebody arriving cold should
+            know what they will get back before they are asked to type anything. */}
+        <ol className="how">
+          <li>
+            <strong>Describe a job you do by hand</strong>
+            <span>A few sentences, the way you would explain it to a colleague.</span>
+          </li>
+          <li>
+            <strong>See which steps are safe to hand over</strong>
+            <span>Every step comes back as one of the three below, with its reasons.</span>
+          </li>
+          <li>
+            <strong>Take away a plan to build it</strong>
+            <span>A map of the tools it connects, a checklist, and a workflow for n8n.</span>
+          </li>
+        </ol>
 
         {/* The colours are taught here, once, so the diagram and the list can
             use them without explaining themselves every time. */}
@@ -355,7 +402,46 @@ export default function App() {
         </section>
       ) : (
         <section className="composer">
+          {examples.length > 0 && (
+            <div className="tray">
+              <p className="tray__lead">
+                <strong>Start with an example</strong> or write your own. The examples are
+                made up, and replay instantly without an API key.
+              </p>
+              <div className="tray__cards">
+                {examples.map((example) => (
+                  <button
+                    key={example.id}
+                    className={`tray__card ${replayCase === example.id ? "tray__card--chosen" : ""}`}
+                    aria-pressed={replayCase === example.id}
+                    onClick={() => useExample(example)}
+                  >
+                    <span className="tray__tag">Example</span>
+                    <span className="tray__title">{example.label}</span>
+                    {example.shows && <span className="tray__shows">{example.shows}</span>}
+                  </button>
+                ))}
+                <button
+                  className="tray__card tray__card--own"
+                  onClick={() => {
+                    if (replayCase) {
+                      setDescription("");
+                      setReplayCase(undefined);
+                    }
+                    box.current?.focus();
+                  }}
+                >
+                  <span className="tray__tag">Your own</span>
+                  <span className="tray__title">Describe a job you do</span>
+                  <span className="tray__shows">Something repetitive, in your own words.</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <textarea
+            ref={box}
+            aria-label="Describe the job"
             value={description}
             placeholder={
               "Every morning I go through my emails looking for invoices. When I find " +
@@ -381,7 +467,7 @@ export default function App() {
             )}
             {!replayCase && !busy && description.trim().length < 20 && (
               <span className="composer__note">
-                A sentence or two is enough, or try an example below.
+                A sentence or two is enough, or pick an example above.
               </span>
             )}
             {restored && !replayCase && (
@@ -401,21 +487,6 @@ export default function App() {
               </span>
             )}
           </div>
-
-          {examples.length > 0 && (
-            <div className="examples">
-              <span>Or try one:</span>
-              {examples.map((example) => (
-                <button
-                  key={example.id}
-                  className="examples__chip"
-                  onClick={() => useExample(example)}
-                >
-                  {example.label}
-                </button>
-              ))}
-            </div>
-          )}
 
           {library.length > 0 && (
             <details className="library">
@@ -619,18 +690,29 @@ export default function App() {
             </div>
           </section>
 
+          {blueprint && <Connections blueprint={blueprint} />}
+
+          {result.graph.questions.length > 0 && (
+            <Questions
+              questions={result.graph.questions}
+              readOnly={Boolean(shared)}
+              answers={answers}
+              onAnswer={(question, answer) =>
+                setAnswers((current) => ({ ...current, [question]: answer }))
+              }
+              given={given.length}
+              busy={busy}
+              onRun={() => run(given)}
+            />
+          )}
+
           <div className="next">
-            {result.graph.questions.length > 0 && (
-              <Questions
-                questions={result.graph.questions}
-                readOnly={Boolean(shared)}
-                answers={answers}
-                onAnswer={(question, answer) =>
-                  setAnswers((current) => ({ ...current, [question]: answer }))
-                }
-                given={given.length}
-                busy={busy}
-                onRun={() => run(given)}
+            {blueprint && (
+              <BuildPlan
+                tasks={blueprint.tasks}
+                onCopy={exportWorkflow}
+                copying={exporting}
+                copied={handoff === "copied"}
               />
             )}
 

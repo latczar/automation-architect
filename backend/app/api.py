@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.assess import assess_process
+from app.blueprint import Blueprint, build_blueprint
 from app.export_n8n import to_n8n
 from app.extract import extract_process
 from app.llm.base import LLMError, StructuredLLM
@@ -37,6 +38,7 @@ EXAMPLES = [
     {
         "id": "invoice-with-approval",
         "label": "Invoice intake, with a manager check",
+        "shows": "A branch on the amount, and a manager who decides.",
         "description": (
             "Every morning I go through my emails looking for invoices. When I find "
             "one I download the PDF attachment, read the total off it, and type that "
@@ -48,6 +50,7 @@ EXAMPLES = [
     {
         "id": "payment-no-approval",
         "label": "Paying suppliers, with nobody checking",
+        "shows": "Money and a deletion our checks will not let run alone.",
         "description": (
             "Every Friday I go through the supplier invoices sitting in our shared "
             "inbox. I read the amount off each one, pay it straight from our business "
@@ -353,6 +356,17 @@ def export_n8n(request: ExportRequest) -> dict:
     """
 
     return to_n8n(request.graph, request.plan)
+
+
+@app.post("/api/blueprint", response_model=Blueprint)
+def blueprint(request: ExportRequest) -> Blueprint:
+    """How the tools fit together, and what is left to build. See app/blueprint.py.
+
+    The same request as the export, for the same reason: it describes what is
+    already on screen, so it takes that back rather than running anything again.
+    """
+
+    return build_blueprint(request.graph, request.plan)
 
 
 class EffortRequest(BaseModel):

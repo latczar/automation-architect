@@ -96,6 +96,10 @@ separate requests, so the article still arrives when the model is slow or down.
 - **Shares a link.** Unguessable id, expires after 30 days.
 - **Hands over to n8n.** A skeleton workflow on your clipboard, with real IF and Wait
   nodes, and labelled placeholders wherever a guess would be wrong.
+- **Shows how it connects, and what is left to build.** A map from the trigger through
+  the workflow to each system and back to you, and a checklist that separates what the
+  export already did from what you still have to do or decide. Both come from the same
+  functions as the export, and a test holds them to it.
 - **Keeps your draft.** In your own browser only, for 7 days.
 
 ## Retrieval, measured
@@ -117,7 +121,7 @@ dimensions is a 160KB file and a loop.
 
 ```bash
 cd backend
-.venv/Scripts/python -m pytest                   # 308 tests, no API calls
+.venv/Scripts/python -m pytest                   # 332 tests, no API calls
 .venv/Scripts/python scripts/eval.py             # the safety net, free and instant
 .venv/Scripts/python scripts/eval.py replay      # the pipeline, recorded answers
 .venv/Scripts/python scripts/eval.py playbooks   # retrieval, free and instant

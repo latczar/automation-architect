@@ -24,7 +24,7 @@ import json
 from typing import Any
 
 from app.n8n_catalogue import NodeChoice, choose_node
-from app.schemas.assessment import AutomationPlan, ControlKind, StepAssessment
+from app.schemas.assessment import AutomationPlan, Control, ControlKind, StepAssessment
 from app.schemas.common import ComparisonOperator, DataType
 from app.schemas.process import ProcessGraph, Step, StepKind, TriggerKind
 
@@ -195,6 +195,30 @@ def to_n8n(graph: ProcessGraph, plan: AutomationPlan | None = None) -> dict:
     }
 
 
+def approval_gate(assessment: StepAssessment | None) -> Control | None:
+    """The control that puts a pause in front of a step, if any.
+
+    The first one that makes a gate wins, in the order the plan lists them. A
+    threshold approval with no threshold cannot be encoded as a check, so it is
+    passed over for whatever comes next. Shared with the blueprint, so the page
+    and the file always agree on where the pauses are.
+    """
+
+    for control in assessment.controls if assessment else []:
+        if control.kind is ControlKind.THRESHOLD_APPROVAL and control.threshold:
+            return control
+        if control.kind in (ControlKind.HUMAN_APPROVAL, ControlKind.DRY_RUN_FIRST):
+            return control
+    return None
+
+
+def node_for(step: Step, assessment: StepAssessment | None, graph: ProcessGraph) -> NodeChoice | None:
+    """The real node a step becomes, or None for a placeholder. See n8n_catalogue."""
+
+    capability = assessment.tool.capability if assessment and assessment.tool else None
+    return choose_node(step, graph, capability)
+
+
 def _build_step(
     builder: _Builder, step: Step, assessment: StepAssessment | None, graph: ProcessGraph
 ) -> tuple[str, str]:
@@ -203,39 +227,36 @@ def _build_step(
     gate_entry: str | None = None
     gate_exit: str | None = None
 
-    for control in assessment.controls if assessment else []:
-        if control.kind is ControlKind.THRESHOLD_APPROVAL and control.threshold:
-            # Encode the limit as a real branch. Above it, wait for a person;
-            # below it, carry straight on.
-            check = builder.add(
-                _shorten(f"Over the limit? {step.name}"),
-                IF_NODE,
-                parameters=_threshold_parameters(control.threshold),
-                notes=control.reason,
-                type_version=2,
-                outputs=2,
-            )
-            wait = builder.add(
-                _shorten(f"Wait for approval: {step.name}"),
-                WAIT_NODE,
-                parameters={"resume": "webhook"},
-                notes=_approval_notes(control.who_approves, control.reason),
-                type_version=1,
-            )
-            builder.connect(check, wait, 0)
-            gate_entry, gate_exit = check, wait
-            break
-
-        if control.kind in (ControlKind.HUMAN_APPROVAL, ControlKind.DRY_RUN_FIRST):
-            wait = builder.add(
-                _shorten(f"Wait for approval: {step.name}"),
-                WAIT_NODE,
-                parameters={"resume": "webhook"},
-                notes=_approval_notes(control.who_approves, control.reason),
-                type_version=1,
-            )
-            gate_entry = gate_exit = wait
-            break
+    gate = approval_gate(assessment)
+    if gate and gate.kind is ControlKind.THRESHOLD_APPROVAL and gate.threshold:
+        # Encode the limit as a real branch. Above it, wait for a person;
+        # below it, carry straight on.
+        check = builder.add(
+            _shorten(f"Over the limit? {step.name}"),
+            IF_NODE,
+            parameters=_threshold_parameters(gate.threshold),
+            notes=gate.reason,
+            type_version=2,
+            outputs=2,
+        )
+        wait = builder.add(
+            _shorten(f"Wait for approval: {step.name}"),
+            WAIT_NODE,
+            parameters={"resume": "webhook"},
+            notes=_approval_notes(gate.who_approves, gate.reason),
+            type_version=1,
+        )
+        builder.connect(check, wait, 0)
+        gate_entry, gate_exit = check, wait
+    elif gate:
+        wait = builder.add(
+            _shorten(f"Wait for approval: {step.name}"),
+            WAIT_NODE,
+            parameters={"resume": "webhook"},
+            notes=_approval_notes(gate.who_approves, gate.reason),
+            type_version=1,
+        )
+        gate_entry = gate_exit = wait
 
     if step.kind is StepKind.DECISION:
         body = builder.add(
@@ -250,8 +271,7 @@ def _build_step(
         # A real node where the description named a system we recognise, a
         # placeholder otherwise. See n8n_catalogue for why that line is drawn
         # from what the person said rather than from what the model suggested.
-        capability = assessment.tool.capability if assessment and assessment.tool else None
-        choice = choose_node(step, graph, capability)
+        choice = node_for(step, assessment, graph)
 
         body = builder.add(
             _shorten(step.name),

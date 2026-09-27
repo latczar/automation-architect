@@ -126,6 +126,18 @@ def analysed(case: str = "invoice-with-approval") -> dict:
     return client.post("/api/analyse", json={"description": INVOICE, "case": case}).json()
 
 
+def test_the_blueprint_describes_what_is_on_screen():
+    analysis = analysed()
+
+    blueprint = client.post(
+        "/api/blueprint", json={"graph": analysis["graph"], "plan": analysis["plan"]}
+    ).json()
+
+    assert {p["id"] for p in blueprint["places"]} == {s["id"] for s in analysis["graph"]["systems"]}
+    assert blueprint["tasks"][0]["status"] == "done"
+    assert blueprint["tasks"][-1]["title"].startswith("Try it once")
+
+
 def test_the_effort_endpoint_multiplies_the_users_own_numbers():
     analysis = analysed()
     steps = [s["id"] for s in analysis["graph"]["steps"]]
