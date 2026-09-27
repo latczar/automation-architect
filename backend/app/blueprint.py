@@ -270,7 +270,11 @@ def _tasks(
     tasks.append(
         Task(
             status="done",
-            title=f"{_plural(len(graph.steps), 'step', 'steps')}, in the order you do them",
+            title=(
+                "Your 1 step, as a node"
+                if len(graph.steps) == 1
+                else f"{len(graph.steps)} steps, in the order you do them"
+            ),
             detail="Each one arrives with a note saying what it does and how it was judged.",
         )
     )
@@ -359,7 +363,9 @@ def _tasks(
         )
 
     for hookup in inside:
-        if hookup.node is None and hookup.kind in FILLABLE:
+        # A step a person keeps gets "keep it with a person" below, not also a
+        # node to fill in: the two would contradict each other on one line apiece.
+        if hookup.node is None and hookup.kind in FILLABLE and hookup.verdict is not Verdict.HUMAN_REQUIRED:
             tasks.append(
                 Task(
                     status="todo",

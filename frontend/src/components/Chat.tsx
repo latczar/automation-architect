@@ -177,6 +177,15 @@ function Reply(props: Props & { kind: Round["kind"] }) {
         <Overview graph={graph} plan={result.plan} onPick={props.onPick} />
       )}
 
+      {/* One step is what comes back when the description names a wish rather
+          than a process ("automate our payroll"). Saying so beats a map of one. */}
+      {!busy && graph && graph.steps.length <= 1 && !shared && (
+        <p className="reply__hint">
+          Only one step came out of that. Say what you actually do, step by step, in the
+          box below, and it can map it properly.
+        </p>
+      )}
+
       {!busy && graph && !result?.plan && (
         <p className="muted">The process was mapped, but the judgement stage did not complete.</p>
       )}

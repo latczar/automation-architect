@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 
 import type { PlaybookMatch } from "../types";
+import { Icon } from "./Icon";
 
 /**
  * The article for a job, shown beside somebody's own process and never instead
@@ -82,28 +83,25 @@ function bold(text: string) {
   );
 }
 
+/** Folded to one line, because it is worth knowing it exists before it is worth reading. */
 export function Playbook({ match, retriever }: Props) {
   return (
-    <section className="playbook">
-      <header className="playbook__head">
+    <details className="playbook playbook--fold">
+      <summary>
+        <Icon name="book" />
         <span className="playbook__label">How this job usually goes</span>
-        <h3>{match.title}</h3>
-      </header>
+        <span className="playbook__title">{match.title}</span>
+      </summary>
 
       <p className="playbook__caveat">
         Retrieved from a written library, not generated. It describes the job in
         general, so the useful part is wherever it differs from yours.
       </p>
-
-      <details>
-        <summary>Read the article</summary>
-        <div className="playbook__body">{render(match.body)}</div>
-      </details>
-
+      <div className="playbook__body">{render(match.body)}</div>
       <p className="playbook__provenance">
         Matched by {retriever === "embeddings" ? "meaning" : "wording"} at{" "}
         {match.score.toFixed(2)}.
       </p>
-    </section>
+    </details>
   );
 }

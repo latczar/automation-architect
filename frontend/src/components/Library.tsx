@@ -1,4 +1,5 @@
 import type { LibraryArticle } from "../types";
+import { Icon } from "./Icon";
 import { render } from "./Playbook";
 
 /**
@@ -10,21 +11,20 @@ import { render } from "./Playbook";
  */
 export function NoPlaybook({ library }: { library: LibraryArticle[] }) {
   return (
-    <section className="playbook playbook--none">
-      <header className="playbook__head">
+    // Closed, because a card saying "nothing here" should not then take up more
+    // room than the cards that found something.
+    <details className="playbook playbook--fold playbook--none">
+      <summary>
+        <Icon name="book" />
         <span className="playbook__label">How this job usually goes</span>
-        <h3>No article for this job yet</h3>
-      </header>
+        <span className="playbook__title">No article for this job yet</span>
+      </summary>
       <p className="playbook__caveat">
-        Nothing in the library was close enough to be worth showing.
+        Nothing in the library was close enough to be worth showing. These are the{" "}
+        {library.length} jobs it covers.
       </p>
-      {/* Closed, because a card saying "nothing here" should not then take up
-          more room than the cards that found something. */}
-      <details className="library library--inline">
-        <summary>See the {library.length} jobs it covers</summary>
-        <Library articles={library} />
-      </details>
-    </section>
+      <Library articles={library} />
+    </details>
   );
 }
 

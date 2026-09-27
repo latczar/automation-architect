@@ -178,3 +178,22 @@ def test_ready_made_nodes_are_listed_the_way_a_person_would_say_them():
     titles = [t.title for t in build_blueprint(*recorded("invoice-with-approval")).tasks]
 
     assert "Ready-made nodes for Google Sheets and Slack" in titles
+
+
+def test_a_step_kept_with_a_person_is_not_also_a_node_to_fill_in():
+    """One step, two tasks telling somebody opposite things, was the live bug."""
+
+    graph = branching_graph()
+    graph.steps[2].kind = StepKind.READ  # ask_manager, now fillable by kind alone
+    titles = [t.title for t in build_blueprint(graph, plan_with([])).tasks]
+
+    assert 'Keep "Ask the manager" with a person' in titles
+    assert 'Fill in "Ask the manager"' not in titles
+
+
+def test_a_single_step_is_not_described_as_an_order():
+    graph = branching_graph()
+    graph.steps = graph.steps[:1]
+    graph.edges = []
+
+    assert build_blueprint(graph, None).tasks[0].title == "Your 1 step, as a node"

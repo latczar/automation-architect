@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 
 import type { AutomationPlan, Blueprint, EffortInput, ProcessGraph } from "../types";
 import { BuildPlan } from "./BuildPlan";
@@ -51,7 +51,10 @@ export function Canvas(props: Props) {
   const { graph, plan, blueprint, tab, onTab, busy, readOnly } = props;
   const list = useRef<HTMLDivElement>(null);
 
-  const left = blueprint?.tasks.filter((t) => t.status !== "done").length ?? 0;
+  // Reported by the checklist as boxes are ticked, so the tab counts down too.
+  const [left, setLeft] = useState(() => blueprint?.tasks.filter((t) => t.status !== "done").length ?? 0);
+  // The ticks are kept per analysis: the same process mapped the same way.
+  const saveAs = `${graph.title}|${graph.steps.map((s) => s.id).join(",")}`;
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "map", label: "Map" },
     ...(blueprint
@@ -218,8 +221,10 @@ export function Canvas(props: Props) {
               tasks={blueprint.tasks}
               onCopy={props.onCopy}
               copying={props.copying}
-              copied={props.handoff === "copied"}
+              copied={props.handoff !== null}
               onQuestions={props.onQuestions}
+              saveAs={saveAs}
+              onLeft={setLeft}
             />
           </div>
         )}

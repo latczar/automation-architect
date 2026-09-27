@@ -2424,3 +2424,515 @@ button:disabled {
     min-height: 60vh;
   }
 }
+
+/* Read at a glance ---------------------------------------------------------- */
+
+.icon {
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The answer as a score: a ring for the share that runs alone, and a count of
+   each verdict beside it. */
+.score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ring {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--unclear-bg);
+}
+
+.ring__hole {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--surface);
+  line-height: 1.1;
+}
+
+.ring__hole strong {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.ring__hole span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.stats {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--unclear);
+}
+
+.stat strong {
+  font-size: 1rem;
+}
+
+.stat--fully_automatable {
+  color: var(--auto);
+}
+
+.stat--automatable_with_control {
+  color: var(--guard);
+}
+
+.stat--human_required {
+  color: var(--human);
+}
+
+.answer .answer__headline {
+  display: -webkit-box;
+  margin: 12px 0 0;
+  overflow: hidden;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.badge:hover:not(:disabled) {
+  border-color: var(--accent);
+  filter: none;
+}
+
+/* The code overruling the model, counted, as the one trophy on the page. */
+.badge--caught {
+  border-color: var(--guard);
+  background: var(--guard-bg);
+  color: var(--guard);
+}
+
+.reply__hint {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--human);
+  border-radius: 8px;
+  background: var(--human-bg);
+  color: var(--human);
+  font-size: 0.875rem;
+}
+
+/* The article as one line until somebody opens it. */
+.playbook--fold {
+  padding: 0;
+}
+
+.playbook--fold > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.playbook--fold > summary::before {
+  order: 3;
+  margin: 0 0 0 auto;
+}
+
+.playbook--fold[open] > summary::before {
+  transform: translateY(-0.1em) rotate(45deg);
+}
+
+.playbook--fold .playbook__label {
+  flex-basis: 100%;
+  order: 0;
+}
+
+.playbook--fold > summary .icon {
+  order: 1;
+  color: var(--accent);
+}
+
+.playbook__title {
+  flex: 1;
+  order: 2;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.playbook--fold > .playbook__caveat,
+.playbook--fold > .playbook__body,
+.playbook--fold > .playbook__provenance,
+.playbook--fold > .library__list {
+  margin-right: 14px;
+  margin-left: 14px;
+}
+
+.playbook--fold > :last-child {
+  margin-bottom: 14px;
+}
+
+/* Questions: how many answered, then chips first and reasons behind a tap. */
+.questions__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.questions__count {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0 2px;
+}
+
+.dots__dot {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--unclear-bg);
+  transition: background-color 0.2s ease;
+}
+
+.dots__dot--done {
+  background: var(--accent);
+}
+
+.question__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.question--answered .question__text .icon {
+  color: var(--accent);
+}
+
+.question__text .question__ours {
+  margin: 0;
+}
+
+.question__why {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
+.question__why summary {
+  width: fit-content;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.question__why p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+/* Verdict cards: one line each until one is picked. */
+.verdict header {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.verdict__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--unclear-bg);
+  color: var(--unclear);
+}
+
+.verdict--fully_automatable .verdict__icon {
+  background: var(--auto-bg);
+  color: var(--auto);
+}
+
+.verdict--automatable_with_control .verdict__icon {
+  background: var(--guard-bg);
+  color: var(--guard);
+}
+
+.verdict--human_required .verdict__icon {
+  background: var(--human-bg);
+  color: var(--human);
+}
+
+.verdict__names {
+  flex: 1;
+  min-width: 0;
+}
+
+.verdict__names .verdict__tag {
+  display: block;
+}
+
+.verdict__caught {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--guard-bg);
+  color: var(--guard);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.verdict__more {
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.verdict--active .verdict__more {
+  transform: rotate(90deg);
+}
+
+.verdict .verdict__why {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.verdict--active .verdict__why {
+  display: block;
+}
+
+/* Build it: a bar that fills, a line for what is done, a box per thing left. */
+.build__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.build__count {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter {
+  height: 8px;
+  margin: 8px 0 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--unclear-bg);
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--auto);
+  transition: width 0.3s ease;
+}
+
+.build__ready {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--auto);
+  border-radius: 10px;
+  background: var(--auto-bg);
+  color: var(--auto);
+  animation: ready 0.4s ease both;
+}
+
+.build__ready div {
+  display: grid;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+@keyframes ready {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.build__export {
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.build__export summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--auto);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.build__export ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.build__export li + li {
+  margin-top: 4px;
+}
+
+.quest {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quest__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.quest__tick {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--surface);
+}
+
+.quest__tick:hover:not(:disabled) {
+  border-color: var(--accent);
+  filter: none;
+}
+
+.quest__item--ticked .quest__tick {
+  border-color: var(--auto);
+  background: var(--auto);
+}
+
+.quest__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.quest__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.quest__title:hover:not(:disabled) {
+  color: var(--accent);
+  filter: none;
+}
+
+.quest__item--ticked .quest__title span:first-child {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.quest__call {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--human-bg);
+  color: var(--human);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.quest__detail {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.quest__action {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build__ready,
+  .meter span,
+  .dots__dot,
+  .verdict__more {
+    animation: none;
+    transition: none;
+  }
+}
