@@ -185,6 +185,21 @@ export interface Place {
 
 export interface Task {
   status: "done" | "todo" | "decide";
+  kind:
+    | "steps"
+    | "branch"
+    | "pause"
+    | "limit"
+    | "ready"
+    | "questions"
+    | "copy"
+    | "connect"
+    | "choose"
+    | "fill"
+    | "approve"
+    | "person"
+    | "unclear"
+    | "test";
   title: string;
   detail: string;
   action: "copy" | "questions" | null;

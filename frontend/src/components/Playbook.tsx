@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
+import { IconBook2 } from "@tabler/icons-react";
 
 import type { PlaybookMatch } from "../types";
-import { Icon } from "./Icon";
 
 /**
  * The article for a job, shown beside somebody's own process and never instead
@@ -88,7 +88,7 @@ export function Playbook({ match, retriever }: Props) {
   return (
     <details className="playbook playbook--fold">
       <summary>
-        <Icon name="book" />
+        <IconBook2 size={18} aria-hidden="true" />
         <span className="playbook__label">How this job usually goes</span>
         <span className="playbook__title">{match.title}</span>
       </summary>

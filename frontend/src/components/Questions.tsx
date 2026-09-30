@@ -1,5 +1,13 @@
+import { ActionIcon, Badge, Button, Chip, TextInput, Tooltip } from "@mantine/core";
+import {
+  IconCircleCheckFilled,
+  IconCircleDashed,
+  IconInfoCircle,
+  IconRefresh,
+  IconShieldCheck,
+} from "@tabler/icons-react";
+
 import type { Question } from "../types";
-import { Icon } from "./Icon";
 
 interface Props {
   questions: Question[];
@@ -16,7 +24,7 @@ interface Props {
 /**
  * What it could not tell from the description, answered with a tap.
  *
- * The suggested answers lead and the reasoning waits behind "Why ask?",
+ * The suggested answers lead and the reasoning waits behind the info icon,
  * because most people can answer a question faster than they can read why it
  * was asked. The count at the top says how close the map is to sharp.
  */
@@ -48,15 +56,43 @@ export function Questions({ questions, readOnly, answers, onAnswer, given, busy,
         {questions.map((question) => {
           const mine = answers[question.question] ?? "";
           const picked = question.suggested_answers.includes(mine);
+          const done = Boolean(mine.trim());
           return (
-            <div key={question.id} className={`question ${mine.trim() ? "question--answered" : ""}`}>
-              <p className="question__text">
-                {mine.trim() && <Icon name="check" size={14} />}
-                {question.question}
-                {/* Said out loud, like the overrides. A question the model never
-                    asked should not pass itself off as one it did. */}
-                {question.added_by_us && <span className="question__ours">From our checks</span>}
-              </p>
+            <div key={question.id} className={`question ${done ? "question--answered" : ""}`}>
+              <div className="question__text">
+                <span className="question__state" aria-hidden="true">
+                  {done ? <IconCircleCheckFilled size={18} /> : <IconCircleDashed size={18} />}
+                </span>
+                <p>{question.question}</p>
+                <Tooltip
+                  label={question.why_it_matters}
+                  events={{ hover: true, focus: true, touch: true }}
+                  position="top-end"
+                >
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    radius="xl"
+                    aria-label={`Why ask: ${question.why_it_matters}`}
+                  >
+                    <IconInfoCircle size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </div>
+
+              {/* Said out loud, like the overrides. A question the model never
+                  asked should not pass itself off as one it did. */}
+              {question.added_by_us && (
+                <Badge
+                  className="question__ours"
+                  size="xs"
+                  variant="outline"
+                  leftSection={<IconShieldCheck size={11} />}
+                >
+                  From our checks
+                </Badge>
+              )}
 
               {question.suggested_answers.length > 0 && (
                 <div className="question__answers">
@@ -66,47 +102,45 @@ export function Questions({ questions, readOnly, answers, onAnswer, given, busy,
                         {answer}
                       </span>
                     ) : (
-                      <button
+                      <Chip
                         key={i}
-                        type="button"
-                        className={`question__suggestion question__suggestion--pick ${
-                          mine === answer ? "question__suggestion--chosen" : ""
-                        }`}
-                        aria-pressed={mine === answer}
-                        onClick={() => onAnswer(question.question, mine === answer ? "" : answer)}
+                        size="sm"
+                        variant="outline"
+                        checked={mine === answer}
+                        onChange={() => onAnswer(question.question, mine === answer ? "" : answer)}
                       >
                         {answer}
-                      </button>
+                      </Chip>
                     ),
                   )}
                 </div>
               )}
 
               {!readOnly && (
-                <input
+                <TextInput
                   className="question__input"
+                  size="sm"
                   value={picked ? "" : mine}
                   placeholder="Or type your own"
                   aria-label={`Your answer: ${question.question}`}
-                  onChange={(event) => onAnswer(question.question, event.target.value)}
+                  onChange={(event) => onAnswer(question.question, event.currentTarget.value)}
                 />
               )}
-
-              <details className="question__why">
-                <summary>Why ask?</summary>
-                <p>{question.why_it_matters}</p>
-              </details>
             </div>
           );
         })}
       </div>
 
       {!readOnly && given > 0 && (
-        <button className="questions__again" onClick={onRun} disabled={busy}>
-          {busy
-            ? "Redrawing..."
-            : `Redraw the map with ${given} ${given === 1 ? "answer" : "answers"}`}
-        </button>
+        <Button
+          className="questions__again"
+          fullWidth
+          leftSection={<IconRefresh size={16} />}
+          onClick={onRun}
+          loading={busy}
+        >
+          Redraw the map with {given} {given === 1 ? "answer" : "answers"}
+        </Button>
       )}
     </section>
   );

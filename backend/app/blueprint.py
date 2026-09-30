@@ -68,6 +68,11 @@ class Task(BaseModel):
     # done: the export already does it. todo: somebody has to. decide: somebody
     # has to make a call before anything can be built.
     status: Literal["done", "todo", "decide"]
+    # What sort of thing it is, so the page can draw it without reading the title.
+    kind: Literal[
+        "steps", "branch", "pause", "limit", "ready", "questions", "copy",
+        "connect", "choose", "fill", "approve", "person", "unclear", "test",
+    ]
     title: str
     detail: str
     action: Literal["copy", "questions"] | None = None
@@ -270,6 +275,7 @@ def _tasks(
     tasks.append(
         Task(
             status="done",
+            kind="steps",
             title=(
                 "Your 1 step, as a node"
                 if len(graph.steps) == 1
@@ -284,6 +290,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="done",
+                kind="branch",
                 title=_plural(len(branches), "branch, as an IF node", "branches, as IF nodes"),
                 detail="Where you said \"if\", the workflow splits the same way.",
             )
@@ -294,6 +301,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="done",
+                kind="pause",
                 title=_plural(
                     len(approvals), "approval pause, as a Wait node", "approval pauses, as Wait nodes"
                 ),
@@ -306,6 +314,7 @@ def _tasks(
             tasks.append(
                 Task(
                     status="done",
+                    kind="limit",
                     title=f"The limit on \"{hookup.name}\", as a check",
                     detail=f"Only {hookup.limit} waits for a person. Anything else carries straight on.",
                 )
@@ -316,6 +325,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="done",
+                kind="ready",
                 title=(
                     f"A ready-made node for {ready[0]}"
                     if len(ready) == 1
@@ -329,6 +339,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="decide",
+                kind="questions",
                 title="Answer the open questions",
                 detail=(
                     f"{_plural(len(graph.questions), 'question', 'questions')} it could not "
@@ -341,6 +352,7 @@ def _tasks(
     tasks.append(
         Task(
             status="todo",
+            kind="copy",
             title="Copy the workflow into n8n",
             detail="Click an empty canvas in n8n and paste. Nothing runs until you switch it on.",
             action="copy",
@@ -353,6 +365,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="todo",
+                kind="connect" if place.node else "choose",
                 title=(
                     f"Connect {_yours(place.name)}"
                     if place.node
@@ -369,6 +382,7 @@ def _tasks(
             tasks.append(
                 Task(
                     status="todo",
+                    kind="fill",
                     title=f"Fill in \"{hookup.name}\"",
                     detail=f"It is a placeholder. Use {REPLACE_WITH[hookup.kind]}.",
                 )
@@ -379,6 +393,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="decide",
+                kind="approve",
                 title=f"Decide how approval for \"{hookup.name}\" reaches {who}",
                 detail=(
                     "The workflow waits here until somebody says yes. A Slack button, "
@@ -391,6 +406,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="decide",
+                kind="person",
                 title=f"Keep \"{hookup.name}\" with a person",
                 detail=(
                     "Nothing is built for this step. The workflow marks the spot but "
@@ -403,6 +419,7 @@ def _tasks(
         tasks.append(
             Task(
                 status="decide",
+                kind="unclear",
                 title=f"Find out more about \"{hookup.name}\"",
                 detail=(
                     "It could not tell whether this is safe to hand over. Describe the "
@@ -414,6 +431,7 @@ def _tasks(
     tasks.append(
         Task(
             status="todo",
+            kind="test",
             title="Try it once with a made-up item",
             detail=(
                 "Run it by hand before switching the trigger on, and check each step "

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Badge, Button, Checkbox, Progress, ThemeIcon } from "@mantine/core";
+import { IconChevronDown, IconCircleCheck, IconCircleDot, IconTrophy } from "@tabler/icons-react";
 
 import type { Task } from "../types";
-import { Icon } from "./Icon";
+import { TASK_ICON } from "./Icon";
 
 interface Props {
   tasks: Task[];
@@ -75,6 +77,8 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
 
   useEffect(() => onLeft?.(tasks.length - finished), [onLeft, tasks.length, finished]);
 
+  const share = (finished / Math.max(tasks.length, 1)) * 100;
+
   return (
     <section className="card build" id="build">
       <header className="build__head">
@@ -83,20 +87,21 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
           {finished} of {tasks.length}
         </span>
       </header>
-      <div
-        className="meter"
-        role="progressbar"
+      <Progress
+        className="build__meter"
+        value={share}
+        size="lg"
+        radius="xl"
+        color={complete ? "runs" : "forest"}
+        transitionDuration={300}
         aria-label="Build progress"
-        aria-valuemin={0}
-        aria-valuemax={tasks.length}
-        aria-valuenow={finished}
-      >
-        <span style={{ width: `${(finished / Math.max(tasks.length, 1)) * 100}%` }} />
-      </div>
+      />
 
       {complete && (
         <div className="build__ready" role="status">
-          <Icon name="trophy" size={22} />
+          <ThemeIcon size={40} radius="xl" color="runs">
+            <IconTrophy size={22} />
+          </ThemeIcon>
           <div>
             <strong>Ready to build</strong>
             <span>Every item is ticked off. Switch the trigger on once the test run looks right.</span>
@@ -107,15 +112,22 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
       {done.length > 0 && (
         <details className="build__export">
           <summary>
-            <Icon name="check" size={14} />
+            <IconCircleCheck size={16} aria-hidden="true" />
             {done.length} {done.length === 1 ? "thing" : "things"} done by the export
+            <IconChevronDown className="build__fold" size={14} aria-hidden="true" />
           </summary>
           <ul>
-            {done.map((task) => (
-              <li key={task.title}>
-                <strong>{task.title}.</strong> {task.detail}
-              </li>
-            ))}
+            {done.map((task) => {
+              const Pictured = TASK_ICON[task.kind] ?? IconCircleDot;
+              return (
+                <li key={task.title}>
+                  <Pictured size={16} aria-hidden="true" />
+                  <span>
+                    <strong>{task.title}.</strong> {task.detail}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </details>
       )}
@@ -124,17 +136,28 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
         {left.map((task) => {
           const isTicked = ticked.has(task.title);
           const isOpen = open === task.title;
+          const Pictured = TASK_ICON[task.kind] ?? IconCircleDot;
           return (
             <li key={task.title} className={`quest__item ${isTicked ? "quest__item--ticked" : ""}`}>
-              <button
+              <Checkbox
                 className="quest__tick"
-                role="checkbox"
-                aria-checked={isTicked}
+                size="md"
+                radius="sm"
+                color="runs"
+                checked={isTicked}
+                onChange={() => toggle(task.title)}
                 aria-label={`Done: ${task.title}`}
-                onClick={() => toggle(task.title)}
+              />
+
+              <ThemeIcon
+                className="quest__icon"
+                size={30}
+                radius="md"
+                variant="light"
+                color={isTicked ? "gray" : task.status === "decide" ? "human" : "forest"}
               >
-                {isTicked && <Icon name="check" size={14} />}
-              </button>
+                <Pictured size={17} stroke={1.8} />
+              </ThemeIcon>
 
               <div className="quest__body">
                 <button
@@ -143,20 +166,24 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
                   onClick={() => setOpen(isOpen ? null : task.title)}
                 >
                   <span>{task.title}</span>
-                  {task.status === "decide" && <span className="quest__call">Your call</span>}
+                  {task.status === "decide" && (
+                    <Badge size="xs" variant="light" color="human">
+                      Your call
+                    </Badge>
+                  )}
                 </button>
                 {isOpen && <p className="quest__detail">{task.detail}</p>}
               </div>
 
               {task.action === "copy" && (
-                <button className="secondary quest__action" onClick={onCopy} disabled={copying}>
-                  {copying ? "Building..." : copied ? "Copied" : "Copy"}
-                </button>
+                <Button size="compact-sm" variant="light" onClick={onCopy} loading={copying}>
+                  {copied ? "Copied" : "Copy"}
+                </Button>
               )}
               {task.action === "questions" && (
-                <button className="secondary quest__action" onClick={onQuestions}>
+                <Button size="compact-sm" variant="light" color="human" onClick={onQuestions}>
                   Answer
-                </button>
+                </Button>
               )}
             </li>
           );

@@ -197,3 +197,15 @@ def test_a_single_step_is_not_described_as_an_order():
     graph.edges = []
 
     assert build_blueprint(graph, None).tasks[0].title == "Your 1 step, as a node"
+
+
+def test_each_task_says_what_sort_it_is_so_the_page_need_not_read_titles():
+    tasks = build_blueprint(*recorded("invoice-with-approval")).tasks
+    kinds = {t.kind for t in tasks}
+
+    assert {"steps", "copy", "test"} <= kinds
+    assert all(t.action == "copy" for t in tasks if t.kind == "copy")
+    assert all(t.action == "questions" for t in tasks if t.kind == "questions")
+    assert all(t.status == "done" for t in tasks if t.kind in {"steps", "branch", "pause", "limit", "ready"})
+    connect = [t for t in tasks if t.kind in {"connect", "choose"}]
+    assert all(t.title.startswith("Connect" if t.kind == "connect" else "Choose") for t in connect)

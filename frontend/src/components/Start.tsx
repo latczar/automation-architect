@@ -1,11 +1,46 @@
 import { useRef } from "react";
+import { ActionIcon, Badge, ThemeIcon } from "@mantine/core";
+import {
+  IconArrowUp,
+  IconBolt,
+  IconBook2,
+  IconCreditCard,
+  IconFileInvoice,
+  IconPencil,
+  IconScale,
+  IconShieldCheck,
+  IconSitemap,
+  IconSparkles,
+  type TablerIcon,
+} from "@tabler/icons-react";
 
-import { VERDICT_LABEL } from "../labels";
-import type { Example, LibraryArticle } from "../types";
+import type { Example, LibraryArticle, StepKind, Verdict } from "../types";
 import { Library } from "./Library";
+import { NodeCard } from "./NodeCard";
 
 // The model needs something to work with, and the server refuses less than this.
 export const SHORTEST = 20;
+
+// A picture for each recorded example. Anything new falls back to the pencil.
+const EXAMPLE_ICON: Record<string, TablerIcon> = {
+  "invoice-with-approval": IconFileInvoice,
+  "payment-no-approval": IconCreditCard,
+};
+
+// What using it looks like, in three steps of a few words each.
+const HOW: { icon: TablerIcon; title: string; note: string }[] = [
+  { icon: IconPencil, title: "Describe it", note: "In your own words" },
+  { icon: IconScale, title: "See what is safe", note: "A verdict for every step" },
+  { icon: IconSitemap, title: "Build it in n8n", note: "Map, checklist and workflow" },
+];
+
+// The key, drawn as the map draws it: three made-up steps, one per verdict,
+// with the few words each colour stands for underneath.
+const PREVIEW: { label: string; kind: StepKind; verdict: Verdict; means: string }[] = [
+  { label: "Read the invoice total", kind: "extract", verdict: "fully_automatable", means: "Nobody needs to watch" },
+  { label: "Pay the supplier", kind: "write", verdict: "automatable_with_control", means: "Only after a yes, or under a limit" },
+  { label: "Approve anything unusual", kind: "judgement", verdict: "human_required", means: "Judgement stays with a person" },
+];
 
 interface Props {
   description: string;
@@ -22,8 +57,8 @@ interface Props {
  * The first screen: one question, one box, and examples to start from.
  *
  * Laid out the way every chat assistant now is, because that is a pattern
- * nobody has to be taught. Everything else it could say waits underneath, for
- * the people who want to know what they are about to get before they type.
+ * nobody has to be taught. Underneath, the whole idea is shown rather than
+ * explained: three steps, and the key drawn as the map draws it.
  */
 export function Start(props: Props) {
   const { description, onChange, onSend, examples, onExample, restored, onClearDraft, library } =
@@ -33,11 +68,16 @@ export function Start(props: Props) {
 
   return (
     <main className="start">
-      <h1 className="start__title">What do you do by hand?</h1>
-      <p className="start__lead">
-        Describe a job and see which steps are safe to hand over, how it would
-        connect to your tools, and how to build it.
-      </p>
+      <div className="start__hero">
+        <span className="start__eyebrow">
+          <IconSparkles size={14} aria-hidden="true" />
+          Plain English in, an n8n workflow out
+        </span>
+        <h1 className="start__title">
+          What do you do <span className="start__accent">by hand?</span>
+        </h1>
+        <p className="start__lead">See which steps a computer can take over, and how to build it.</p>
+      </div>
 
       <form
         className="prompt"
@@ -79,79 +119,92 @@ export function Start(props: Props) {
               "A few sentences is enough"
             )}
           </span>
-          <button className="prompt__send" type="submit" aria-label="Analyse this">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M12 19V5 M6 11l6-6 6 6" />
-            </svg>
-          </button>
+          <ActionIcon
+            type="submit"
+            size={38}
+            radius="md"
+            variant={ready ? "filled" : "light"}
+            aria-label="Analyse this"
+          >
+            <IconArrowUp size={20} stroke={2.2} />
+          </ActionIcon>
         </div>
       </form>
 
       {examples.length > 0 && (
         <div className="starters">
-          {examples.map((example) => (
-            <button key={example.id} className="starter" onClick={() => onExample(example)}>
-              <span className="starter__title">{example.label}</span>
-              {example.shows && <span className="starter__shows">{example.shows}</span>}
-              <span className="starter__tag">
-                {example.replayable ? "Example, runs instantly" : "Example"}
-              </span>
-            </button>
-          ))}
-          <button className="starter starter--own" onClick={() => box.current?.focus()}>
-            <span className="starter__title">Describe your own</span>
-            <span className="starter__shows">Something repetitive, in your own words.</span>
-            <span className="starter__tag">Your own</span>
-          </button>
+          <span className="starters__label">Or try one</span>
+          {examples.map((example) => {
+            const Pictured = EXAMPLE_ICON[example.id] ?? IconPencil;
+            return (
+              <button key={example.id} className="starter" onClick={() => onExample(example)}>
+                <ThemeIcon size={36} radius="md" variant="light">
+                  <Pictured size={20} stroke={1.8} />
+                </ThemeIcon>
+                <span className="starter__text">
+                  <span className="starter__title">{example.label}</span>
+                  {example.shows && <span className="starter__shows">{example.shows}</span>}
+                </span>
+                {example.replayable && (
+                  <Badge
+                    className="starter__tag"
+                    size="sm"
+                    variant="light"
+                    color="runs"
+                    leftSection={<IconBolt size={11} />}
+                  >
+                    Instant
+                  </Badge>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
       <section className="explain" aria-label="How it works">
         <ol className="how">
-          <li>
-            <strong>Describe a job you do by hand</strong>
-            <span>The way you would explain it to a colleague.</span>
-          </li>
-          <li>
-            <strong>See which steps are safe to hand over</strong>
-            <span>Each one comes back as one of the three below, with its reasons.</span>
-          </li>
-          <li>
-            <strong>Take away a plan to build it</strong>
-            <span>A map of the tools, a checklist, and a workflow for n8n.</span>
-          </li>
+          {HOW.map(({ icon: Pictured, title, note }, index) => (
+            <li key={title} className="how__step">
+              <ThemeIcon className="how__icon" size={48} radius="xl" variant="white">
+                <Pictured size={22} stroke={1.8} />
+              </ThemeIcon>
+              <span className="how__number">{index + 1}</span>
+              <strong>{title}</strong>
+              <span>{note}</span>
+            </li>
+          ))}
         </ol>
 
-        {/* The colours are taught here, once, so the map can use them without
-            explaining itself every time. */}
-        <ul className="key">
-          <li className="key__item key__item--fully_automatable">
-            <strong>{VERDICT_LABEL.fully_automatable}</strong>
-            <span>A computer can do it with nobody watching.</span>
-          </li>
-          <li className="key__item key__item--automatable_with_control">
-            <strong>{VERDICT_LABEL.automatable_with_control}</strong>
-            <span>A computer can do it, once a person signs off or a limit applies.</span>
-          </li>
-          <li className="key__item key__item--human_required">
-            <strong>{VERDICT_LABEL.human_required}</strong>
-            <span>Judgement that should not be handed over.</span>
-          </li>
-        </ul>
+        {/* The colours are taught here, once, by showing them on steps drawn
+            exactly as the map draws them. */}
+        <div className="preview" aria-label="What the colours mean">
+          {PREVIEW.map((step) => (
+            <figure key={step.label} className="preview__item">
+              <NodeCard label={step.label} kind={step.kind} verdict={step.verdict} />
+              <figcaption>{step.means}</figcaption>
+            </figure>
+          ))}
+        </div>
 
         <p className="key__rule">
-          A step that moves money, cannot be undone or carries legal weight never comes
-          back as &ldquo;runs itself&rdquo;. That rule is in the code, so the model cannot
-          argue its way past it.
+          <IconShieldCheck size={18} aria-hidden="true" />
+          <span>
+            Money, deletions and anything with legal weight never run alone. That rule is in
+            the code, so the model cannot argue its way past it.
+          </span>
         </p>
 
         {library.length > 0 && (
           <details className="library">
-            <summary>Articles it can match you to ({library.length})</summary>
+            <summary>
+              <IconBook2 size={16} aria-hidden="true" />
+              Articles it can match you to ({library.length})
+            </summary>
             <p className="library__lead">
-              A small written library, searched by meaning against what you type. When
-              one is close enough, it appears beside your process. They are shown to
-              you, not fed to the model that judges your process.
+              A small written library, searched by meaning against what you type. When one is
+              close enough, it appears beside your process. The model that judges your process
+              never reads them.
             </p>
             <Library articles={library} />
           </details>

@@ -1,39 +1,143 @@
-import type { Verdict } from "../types";
+import {
+  IconBell,
+  IconBolt,
+  IconBox,
+  IconBrandAirtable,
+  IconBrandAsana,
+  IconBrandDiscord,
+  IconBrandDropbox,
+  IconBrandGithub,
+  IconBrandGmail,
+  IconBrandGoogleDrive,
+  IconBrandNotion,
+  IconBrandPaypal,
+  IconBrandSlack,
+  IconBrandStripe,
+  IconBrandTeams,
+  IconBrandTelegram,
+  IconBrandTrello,
+  IconBrandWhatsapp,
+  IconBrandZoom,
+  IconCalculator,
+  IconCalendarEvent,
+  IconClipboardCopy,
+  IconCreditCard,
+  IconDatabase,
+  IconDeviceMobile,
+  IconEye,
+  IconFileSpreadsheet,
+  IconFileText,
+  IconFlask,
+  IconFolder,
+  IconForms,
+  IconGitBranch,
+  IconHandClick,
+  IconHelpCircle,
+  IconHourglass,
+  IconListCheck,
+  IconMail,
+  IconMessageCircle,
+  IconMessageQuestion,
+  IconPencil,
+  IconPlug,
+  IconScan,
+  IconShieldCheck,
+  IconSitemap,
+  IconSparkles,
+  IconTransform,
+  IconUser,
+  IconUserCheck,
+  IconUsers,
+  IconWorld,
+  type TablerIcon,
+} from "@tabler/icons-react";
 
-// Outline icons on a 24 unit grid, drawn in the text colour. A handful, kept
-// here rather than pulled from a library, because a library of thousands for
-// eight shapes is weight nobody needs.
-const PATHS = {
-  bolt: "M13 3 5 13h6l-1 8 8-10h-6z",
-  shield: "M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z M9 12l2 2 4-4",
-  person: "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5",
-  question: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6 M12 17h.01",
-  trophy: "M8 4h8v5a4 4 0 0 1-8 0z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M9 20h6 M10 17h4",
-  check: "M5 12.5l4.5 4.5L19 7.5",
-  chevron: "M9 6l6 6-6 6",
-  book: "M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z M5 16a4 4 0 0 1 4-4h10",
-} as const;
+import type { StepKind, Task, Verdict } from "../types";
 
-export type IconName = keyof typeof PATHS;
+// Tabler, the icon set Mantine's own docs use: one stroke width and one grid,
+// so a verdict, a step and a system all look like they belong together.
 
-export const VERDICT_ICON: Record<Verdict, IconName> = {
-  fully_automatable: "bolt",
-  automatable_with_control: "shield",
-  human_required: "person",
-  needs_more_info: "question",
+export const VERDICT_ICON: Record<Verdict, TablerIcon> = {
+  fully_automatable: IconBolt,
+  automatable_with_control: IconShieldCheck,
+  human_required: IconUser,
+  needs_more_info: IconHelpCircle,
 };
 
-export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
-  return (
-    <svg
-      className="icon"
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d={PATHS[name]} />
-    </svg>
-  );
+/** What a step does, drawn, so the map can be read before its words are. */
+export const KIND_ICON: Record<StepKind, TablerIcon> = {
+  read: IconEye,
+  extract: IconScan,
+  transform: IconTransform,
+  decision: IconGitBranch,
+  write: IconPencil,
+  notify: IconBell,
+  judgement: IconUserCheck,
+  wait: IconHourglass,
+};
+
+/** The kind of system, for when the name is not one we have a logo for. */
+export const CATEGORY_ICON: Record<string, TablerIcon> = {
+  email: IconMail,
+  spreadsheet: IconFileSpreadsheet,
+  database: IconDatabase,
+  crm: IconUsers,
+  chat: IconMessageCircle,
+  calendar: IconCalendarEvent,
+  file_storage: IconFolder,
+  accounting: IconCalculator,
+  forms: IconForms,
+  website: IconWorld,
+  phone_or_sms: IconDeviceMobile,
+  payments: IconCreditCard,
+  paper_or_offline: IconFileText,
+  internal_tool: IconBox,
+  other: IconBox,
+};
+
+// A product somebody named gets its own mark, because a logo is recognised
+// faster than a word is read. Matched on the whole word, so "Slack" finds the
+// Slack mark and "slackening" finds nothing.
+const BRANDS: [RegExp, TablerIcon][] = [
+  [/\bslack\b/i, IconBrandSlack],
+  [/\bgmail\b/i, IconBrandGmail],
+  [/\bgoogle drive\b/i, IconBrandGoogleDrive],
+  [/\bnotion\b/i, IconBrandNotion],
+  [/\bstripe\b/i, IconBrandStripe],
+  [/\btrello\b/i, IconBrandTrello],
+  [/\b(microsoft )?teams\b/i, IconBrandTeams],
+  [/\bpaypal\b/i, IconBrandPaypal],
+  [/\basana\b/i, IconBrandAsana],
+  [/\bairtable\b/i, IconBrandAirtable],
+  [/\bzoom\b/i, IconBrandZoom],
+  [/\bwhatsapp\b/i, IconBrandWhatsapp],
+  [/\bdiscord\b/i, IconBrandDiscord],
+  [/\btelegram\b/i, IconBrandTelegram],
+  [/\bdropbox\b/i, IconBrandDropbox],
+  [/\bgithub\b/i, IconBrandGithub],
+];
+
+export function systemIcon(name: string, category: string): TablerIcon {
+  return BRANDS.find(([pattern]) => pattern.test(name))?.[1] ?? CATEGORY_ICON[category] ?? IconBox;
 }
+
+/** One icon per sort of task on the checklist. */
+export const TASK_ICON: Record<Task["kind"], TablerIcon> = {
+  steps: IconListCheck,
+  branch: IconGitBranch,
+  pause: IconHourglass,
+  limit: IconShieldCheck,
+  ready: IconSparkles,
+  questions: IconMessageQuestion,
+  copy: IconClipboardCopy,
+  connect: IconPlug,
+  choose: IconHandClick,
+  fill: IconPencil,
+  approve: IconUserCheck,
+  person: IconUser,
+  unclear: IconHelpCircle,
+  test: IconFlask,
+};
+
+/** The mark: a process drawn as a tree of steps. */
+export const BRAND_ICON = IconSitemap;

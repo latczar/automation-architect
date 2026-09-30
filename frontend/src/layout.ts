@@ -5,7 +5,7 @@ import type { Node, Edge } from "@xyflow/react";
 // numbers, so a node drawn wider or taller than it was told about crowds its
 // neighbours and pulls the edges off centre.
 export const NODE_WIDTH = 240;
-export const NODE_HEIGHT = 88;
+export const NODE_HEIGHT = 100;
 
 export interface Point {
   x: number;

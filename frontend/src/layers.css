@@ -1,0 +1,4 @@
+/* Loaded first, so it decides the order. Later layers win, and anything in no
+   layer beats them all: our element defaults lose to Mantine's components, and
+   our own classes still win over both. */
+@layer base, mantine;

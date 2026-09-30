@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { Button, Progress, ThemeIcon } from "@mantine/core";
+import { IconBolt, IconClock } from "@tabler/icons-react";
 
 import { calculateEffort } from "../api";
 import type {
@@ -74,14 +76,17 @@ export function Effort({ graph, plan, initial, onChange }: Props) {
 
   if (!open) {
     return (
-      <section className="effort">
-        <button className="secondary" onClick={() => setOpen(true)}>
-          Work out how much time this takes
-        </button>
-        <p className="effort__pitch">
-          Two questions, and the arithmetic is yours rather than ours. We will not
-          guess these numbers for you.
-        </p>
+      <section className="card effort effort--closed">
+        <ThemeIcon size={48} radius="xl" variant="light">
+          <IconClock size={26} stroke={1.7} />
+        </ThemeIcon>
+        <div className="effort__intro">
+          <h2>How much time would it give back?</h2>
+          <p className="effort__pitch">
+            Two questions, and the numbers are yours. We will not guess them for you.
+          </p>
+        </div>
+        <Button onClick={() => setOpen(true)}>Work it out</Button>
       </section>
     );
   }
@@ -89,7 +94,8 @@ export function Effort({ graph, plan, initial, onChange }: Props) {
   const nameOf = (id: string) => graph.steps.find((s) => s.id === id)?.name ?? id;
 
   return (
-    <section className="effort effort--open">
+    <section className="card effort effort--open">
+      <h2>Time it takes</h2>
 
       <p className="effort__frequency">
         I do this{" "}
@@ -150,18 +156,26 @@ export function Effort({ graph, plan, initial, onChange }: Props) {
 
       {summary && (
         <div className="effort__result">
-          <p className="effort__headline">
-            That is <strong>{duration(summary.hours_per_month)}</strong> a month, of
-            which <strong>{duration(summary.hours_that_could_run_without_you)}</strong>{" "}
-            could run without you.
-          </p>
-
-          <div className="effort__bar" aria-hidden>
-            <span
-              className="effort__bar-fill"
-              style={{ width: `${summary.percentage_automatable}%` }}
-            />
+          <div className="effort__tiles">
+            <div className="effort__tile">
+              <IconClock size={18} aria-hidden="true" />
+              <strong>{duration(summary.hours_per_month)}</strong>
+              <span>a month, by hand</span>
+            </div>
+            <div className="effort__tile effort__tile--saved">
+              <IconBolt size={18} aria-hidden="true" />
+              <strong>{duration(summary.hours_that_could_run_without_you)}</strong>
+              <span>could run without you</span>
+            </div>
           </div>
+
+          <Progress
+            value={summary.percentage_automatable}
+            size="lg"
+            radius="xl"
+            color="runs"
+            aria-label="Share of the time that could run without you"
+          />
           <p className="effort__percent">
             {summary.percentage_automatable}% of the time, across roughly{" "}
             {summary.runs_per_month} runs a month

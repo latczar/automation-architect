@@ -1,7 +1,16 @@
 import { useState } from "react";
+import { Badge, Switch, ThemeIcon } from "@mantine/core";
+import {
+  IconArrowDown,
+  IconCircleCheck,
+  IconCircleDashed,
+  IconClock,
+  IconUser,
+} from "@tabler/icons-react";
 
-import { VERDICT_LABEL } from "../labels";
+import { VERDICT_COLOR, VERDICT_LABEL } from "../labels";
 import type { Blueprint, Hookup, Place } from "../types";
+import { BRAND_ICON, systemIcon, VERDICT_ICON } from "./Icon";
 
 const CATEGORY: Record<string, string> = {
   email: "Email",
@@ -21,39 +30,6 @@ const CATEGORY: Record<string, string> = {
   other: "Other",
 };
 
-// One small outline icon per kind of thing, so a system can be told apart at a
-// glance before its name is read. Drawn on a 24 unit grid in the text colour.
-const ICON: Record<string, string> = {
-  email: "M3 6h18v12H3z M3 7l9 6 9-6",
-  spreadsheet: "M4 4h16v16H4z M4 10h16 M4 15h16 M10 4v16",
-  database: "M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6 M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3",
-  crm: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5 M16 5a3 3 0 0 1 0 6 M18 15c2 .6 3 2.3 3 5",
-  chat: "M4 5h16v11H9l-5 4z",
-  calendar: "M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5",
-  file_storage: "M3 7h7l2 2h9v10H3z",
-  accounting: "M5 3h14v18H5z M8 7h8 M8 11h2 M14 11h2 M8 15h2 M14 15h2",
-  forms: "M6 4h12v17H6z M9 4V2h6v2 M9 10h6 M9 14h6",
-  website: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M3 12h18 M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z",
-  phone_or_sms: "M7 3h10v18H7z M11 18h2",
-  payments: "M3 6h18v12H3z M3 10h18 M7 15h4",
-  paper_or_offline: "M6 3h9l3 3v15H6z M9 10h6 M9 14h6 M9 18h4",
-  internal_tool: "M4 7l8-4 8 4-8 4z M4 7v10l8 4 8-4V7 M12 11v10",
-  other: "M4 7l8-4 8 4-8 4z M4 7v10l8 4 8-4V7 M12 11v10",
-  trigger: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 7v5l3 2",
-  workflow: "M5 5h5v5H5z M14 14h5v5h-5z M10 7.5h4a2 2 0 0 1 2 2V14",
-  person: "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5",
-};
-
-function Icon({ name }: { name: string }) {
-  return (
-    <span className="map__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="20" height="20">
-        <path d={ICON[name] ?? ICON.other} />
-      </svg>
-    </span>
-  );
-}
-
 /** "shared inbox" as a heading reads better as "Shared inbox". */
 function heading(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
@@ -71,19 +47,30 @@ function Steps({ steps, technical, asked = false }: StepsProps) {
     <ul className="map__steps">
       {steps.map((step) => {
         const verdict = step.verdict ?? "needs_more_info";
+        const Pictured = VERDICT_ICON[verdict];
         return (
           <li key={step.step_id} className="map__step">
-            <span className={`map__pill map__pill--${verdict}`}>{VERDICT_LABEL[verdict]}</span>
+            {/* The colour and the icon carry the verdict; the label is there for
+                anybody who cannot see either. */}
+            <ThemeIcon
+              size={22}
+              radius="xl"
+              variant="light"
+              color={VERDICT_COLOR[verdict]}
+              title={VERDICT_LABEL[verdict]}
+            >
+              <Pictured size={13} stroke={2.2} aria-label={VERDICT_LABEL[verdict]} />
+            </ThemeIcon>
             <span className="map__step-name">{step.name}</span>
             {step.gate && !asked && (
-              <span className="map__gate">
-                {step.gate === "limit" && step.limit
-                  ? `waits for a yes if ${step.limit}`
-                  : "waits for a yes"}
-              </span>
+              <Badge size="sm" variant="light" color="guard" className="map__gate">
+                {step.gate === "limit" && step.limit ? `waits if ${step.limit}` : "waits for a yes"}
+              </Badge>
             )}
             {asked && step.gate === "limit" && step.limit && (
-              <span className="map__gate">only if {step.limit}</span>
+              <Badge size="sm" variant="light" color="guard" className="map__gate">
+                only if {step.limit}
+              </Badge>
             )}
             {technical && <code className="map__type">{step.node_type}</code>}
           </li>
@@ -94,13 +81,16 @@ function Steps({ steps, technical, asked = false }: StepsProps) {
 }
 
 function PlaceCard({ place, technical }: { place: Place; technical: boolean }) {
+  const Pictured = systemIcon(place.name, place.category);
   return (
     <article className="map__card place">
       <header className="map__head">
-        <Icon name={place.category} />
+        <ThemeIcon size={40} radius="md" variant="light" color="gray">
+          <Pictured size={22} stroke={1.7} />
+        </ThemeIcon>
         <div>
           <h3>{heading(place.name)}</h3>
-          <span className="map__role">System &middot; {CATEGORY[place.category] ?? place.category}</span>
+          <span className="map__role">{CATEGORY[place.category] ?? place.category}</span>
         </div>
       </header>
 
@@ -110,11 +100,33 @@ function PlaceCard({ place, technical }: { place: Place; technical: boolean }) {
         <p className="map__quiet">Mentioned, but no step happens here.</p>
       )}
 
-      <p className={`place__node ${place.node ? "place__node--ready" : ""}`}>
-        {place.node ? `Ready-made node: ${place.node}` : "No node picked yet"}
-      </p>
-      <p className="place__setup">{place.setup}</p>
+      <div className="place__foot">
+        {place.node ? (
+          <Badge variant="light" color="runs" leftSection={<IconCircleCheck size={13} />}>
+            {place.node} node
+          </Badge>
+        ) : (
+          <Badge variant="light" color="gray" leftSection={<IconCircleDashed size={13} />}>
+            No node picked yet
+          </Badge>
+        )}
+        <details className="place__how">
+          <summary>How to connect</summary>
+          <p>{place.setup}</p>
+        </details>
+      </div>
     </article>
+  );
+}
+
+function Link({ label }: { label: string }) {
+  return (
+    <div className="map__link" aria-hidden="true">
+      <span>
+        <IconArrowDown size={13} />
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -122,10 +134,10 @@ function PlaceCard({ place, technical }: { place: Place; technical: boolean }) {
  * How the finished automation fits together: what starts it, the workflow in
  * the middle, every system it talks to, and where it comes back to a person.
  *
- * The diagram above is the process as somebody does it today. This is the same
- * process as a builder sees it, organised by the tools rather than the order,
- * because "what do I need to connect" is the first question anybody asks once
- * they have decided to build it. Each part is labelled as what it actually is.
+ * The map is the process as somebody does it today. This is the same process
+ * as a builder sees it, organised by the tools rather than the order, because
+ * "what do I need to connect" is the first question anybody asks once they have
+ * decided to build it. Each part is labelled as what it actually is.
  */
 export function Connections({ blueprint }: { blueprint: Blueprint }) {
   // Plain words for everybody, the names n8n itself uses for anybody who
@@ -140,69 +152,75 @@ export function Connections({ blueprint }: { blueprint: Blueprint }) {
   // A step a person does has no system and so sits "inside" by elimination,
   // but it is not the workflow doing it. It is listed under You instead.
   const automated = blueprint.inside.filter((s) => s.verdict !== "human_required");
+  const Mark = BRAND_ICON;
+  const Runs = VERDICT_ICON.fully_automatable;
+  const Waits = VERDICT_ICON.automatable_with_control;
+  const Yours = VERDICT_ICON.human_required;
 
   return (
     <section className="connects" id="connects">
       <header className="section__head section__head--split">
-        <div>
-          <h2>How it connects</h2>
-          <p>
-            What starts it, the workflow in the middle, each system it talks to, and
-            where it comes back to you.
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={technical}
-            onChange={(event) => setTechnical(event.target.checked)}
-          />
-          <span>Show n8n names</span>
-        </label>
+        <h2>How it connects</h2>
+        <Switch
+          size="sm"
+          label="Show n8n names"
+          checked={technical}
+          onChange={(event) => setTechnical(event.currentTarget.checked)}
+        />
       </header>
 
       <div className="map">
-        <article className="map__card map__card--narrow">
+        <article className="map__card map__card--narrow map__card--start">
           <header className="map__head">
-            <Icon name="trigger" />
+            <ThemeIcon size={40} radius="md" variant="light" color="forest">
+              <IconClock size={22} stroke={1.7} />
+            </ThemeIcon>
             <div>
               <h3>{blueprint.trigger_node}</h3>
               <span className="map__role">What starts it</span>
             </div>
           </header>
           <p className="map__quote">&ldquo;{blueprint.trigger}&rdquo;</p>
-          {blueprint.watches && <p className="map__quiet">Watching: {blueprint.watches}</p>}
+          {blueprint.watches && (
+            <Badge variant="default" className="map__watch">
+              Watching: {blueprint.watches}
+            </Badge>
+          )}
           {technical && <code className="map__type">{blueprint.trigger_type}</code>}
         </article>
 
-        <div className="map__link" aria-hidden="true">
-          <span>then</span>
-        </div>
+        <Link label="then" />
 
         <article className="map__card map__card--narrow map__card--hub">
           <header className="map__head">
-            <Icon name="workflow" />
+            <ThemeIcon size={40} radius="md" variant="gradient" gradient={{ from: "forest.7", to: "runs.7", deg: 135 }}>
+              <Mark size={22} stroke={1.8} />
+            </ThemeIcon>
             <div>
               <h3>An n8n workflow</h3>
               <span className="map__role">The automation</span>
             </div>
           </header>
-          <p className="map__counts">
-            <strong>{runs}</strong> {runs === 1 ? "step runs on its own" : "steps run on their own"},{" "}
-            <strong>{waits}</strong> {waits === 1 ? "waits" : "wait"} for a yes,{" "}
-            <strong>{yours}</strong> {yours === 1 ? "stays" : "stay"} with you.
-          </p>
+          <div className="map__counts">
+            <Badge size="lg" variant="light" color="runs" leftSection={<Runs size={14} />}>
+              {runs} on {runs === 1 ? "its" : "their"} own
+            </Badge>
+            <Badge size="lg" variant="light" color="guard" leftSection={<Waits size={14} />}>
+              {waits} {waits === 1 ? "waits" : "wait"} for a yes
+            </Badge>
+            <Badge size="lg" variant="light" color="human" leftSection={<Yours size={14} />}>
+              {yours} with you
+            </Badge>
+          </div>
           {automated.length > 0 && (
             <>
-              <p className="map__sub">Done inside the workflow, with no outside system</p>
+              <p className="map__sub">Done inside the workflow</p>
               <Steps steps={automated} technical={technical} />
             </>
           )}
         </article>
 
-        <div className="map__link" aria-hidden="true">
-          <span>talks to</span>
-        </div>
+        <Link label="talks to" />
 
         <div className="map__lane">
           <span className="map__lane-label">
@@ -222,13 +240,13 @@ export function Connections({ blueprint }: { blueprint: Blueprint }) {
           )}
         </div>
 
-        <div className="map__link" aria-hidden="true">
-          <span>comes back to</span>
-        </div>
+        <Link label="comes back to" />
 
         <article className="map__card map__card--narrow map__card--you">
           <header className="map__head">
-            <Icon name="person" />
+            <ThemeIcon size={40} radius="md" variant="light" color="human">
+              <IconUser size={22} stroke={1.7} />
+            </ThemeIcon>
             <div>
               <h3>You</h3>
               <span className="map__role">Person</span>

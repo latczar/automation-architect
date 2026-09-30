@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import { Badge, ThemeIcon } from "@mantine/core";
+import { IconChevronRight, IconHandClick, IconTrophy } from "@tabler/icons-react";
 
-import { plainly, VERDICT_LABEL as LABEL, VERDICT_ORDER as ORDER } from "../labels";
-import type { AutomationPlan, Override, ProcessGraph } from "../types";
-import { Icon, VERDICT_ICON } from "./Icon";
+import { plainly, VERDICT_COLOR, VERDICT_LABEL as LABEL, VERDICT_ORDER as ORDER } from "../labels";
+import type { AutomationPlan, Override, ProcessGraph, StepAssessment } from "../types";
+import { VERDICT_ICON } from "./Icon";
 
 const OVERRIDE_KIND: Record<Override["kind"], string> = {
   risk_added: "Risk added",
@@ -33,107 +35,129 @@ export function Verdicts({ graph, plan, selected, onSelect }: Props) {
       ?.scrollIntoView({ block: "nearest" });
   }, [selected]);
 
-  // Anything needing attention first. A list that opens with six green rows
-  // buries the one thing the reader actually has to decide about.
-  const sorted = [...plan.assessments].sort(
-    (a, b) => ORDER.indexOf(a.verdict) - ORDER.indexOf(b.verdict),
-  );
+  // Anything needing attention first, in a group per verdict. A list that
+  // opens with six green rows buries the one thing the reader has to decide.
+  const groups = ORDER.map((verdict) => ({
+    verdict,
+    items: plan.assessments.filter((a) => a.verdict === verdict),
+  })).filter((g) => g.items.length > 0);
 
   // One line per step until one is picked, then everything about that one.
-  // Seven cards of full reasoning at once is a wall; seven headlines is a list
+  // Seven cards of full reasoning at once is a wall; seven names is a list
   // somebody can actually scan.
+  const card = (assessment: StepAssessment) => {
+    const open = selected === assessment.step_id;
+    const caught = (assessment.overrides ?? []).length;
+    return (
+      <article
+        key={assessment.step_id}
+        data-step={assessment.step_id}
+        className={`verdict verdict--${assessment.verdict} ${open ? "verdict--active" : ""}`}
+      >
+        <button
+          type="button"
+          className="verdict__head"
+          aria-expanded={open}
+          onClick={() => onSelect(open ? null : assessment.step_id)}
+        >
+          <span className="verdict__name">{nameOf(assessment.step_id)}</span>
+          {caught > 0 && (
+            <Badge
+              size="sm"
+              variant="light"
+              color="guard"
+              leftSection={<IconTrophy size={12} />}
+              title="The code overruled the model here"
+            >
+              {caught}
+            </Badge>
+          )}
+          <span className="verdict__more">
+            <IconChevronRight size={16} aria-hidden="true" />
+          </span>
+        </button>
+
+        {open && (
+          <div className="verdict__body">
+            <p className="verdict__why">{assessment.rationale}</p>
+            {/* The one thing on this page that is ours rather than the model's.
+                Without it a verdict we corrected and a verdict it got right look
+                exactly the same, and the correction is the whole point. */}
+            {(assessment.overrides ?? []).length > 0 && (
+              <div className="override">
+                <strong className="override__title">
+                  We overruled the model on this step
+                </strong>
+                {(assessment.overrides ?? []).map((override, index) => (
+                  <p key={index} className="override__line">
+                    <span className="override__change">
+                      <span className="override__kind">{OVERRIDE_KIND[override.kind]}</span>
+                      <s className="override__was">{plainly(override.was)}</s>{" "}
+                      <span aria-hidden="true">&rarr;</span>{" "}
+                      <strong className="override__now">{plainly(override.now)}</strong>
+                    </span>
+                    {override.because}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {assessment.risks.length > 0 && (
+              <p className="verdict__risks">
+                {assessment.risks.map((risk) => (
+                  <span key={risk} className="chip">
+                    {risk.replace(/_/g, " ")}
+                  </span>
+                ))}
+              </p>
+            )}
+
+            {assessment.controls.map((control, index) => (
+              <div key={index} className="control">
+                <strong>{control.kind.replace(/_/g, " ")}</strong>
+                {control.threshold && (
+                  <span className="control__limit">
+                    {" "}
+                    when {control.threshold.field} {control.threshold.operator}{" "}
+                    {control.threshold.value} {control.threshold.currency ?? ""}
+                  </span>
+                )}
+                <p>{control.reason}</p>
+                {control.who_approves && <p className="control__who">Approver: {control.who_approves}</p>}
+              </div>
+            ))}
+
+            {assessment.blockers.map((blocker, index) => (
+              <div key={index} className="blocker">
+                <strong>{blocker.kind.replace(/_/g, " ")}</strong>
+                <p>{blocker.detail}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+    );
+  };
+
   return (
     <section className="verdicts" ref={list}>
-      {sorted.map((assessment) => {
-        const open = selected === assessment.step_id;
-        const caught = (assessment.overrides ?? []).length;
+      <p className="verdicts__hint">
+        <IconHandClick size={15} aria-hidden="true" />
+        Pick a step to see why
+      </p>
+      {groups.map(({ verdict, items }) => {
+        const Pictured = VERDICT_ICON[verdict];
         return (
-          <article
-            key={assessment.step_id}
-            data-step={assessment.step_id}
-            className={`verdict verdict--${assessment.verdict} ${open ? "verdict--active" : ""}`}
-            onClick={() => onSelect(open ? null : assessment.step_id)}
-            aria-expanded={open}
-          >
-            <header>
-              <span className="verdict__icon">
-                <Icon name={VERDICT_ICON[assessment.verdict]} />
-              </span>
-              <div className="verdict__names">
-                <span className="verdict__tag">{LABEL[assessment.verdict]}</span>
-                <h3>{nameOf(assessment.step_id)}</h3>
-              </div>
-              {caught > 0 && (
-                <span className="verdict__caught" title="The code overruled the model here">
-                  <Icon name="trophy" size={13} />
-                  {caught}
-                </span>
-              )}
-              <span className="verdict__more">
-                <Icon name="chevron" size={14} />
-              </span>
-            </header>
-
-            <p className="verdict__why">{assessment.rationale}</p>
-
-            {open && (
-              <>
-              {/* The one thing on this page that is ours rather than the model's.
-                  Without it a verdict we corrected and a verdict it got right look
-                  exactly the same, and the correction is the whole point. */}
-              {(assessment.overrides ?? []).length > 0 && (
-                <div className="override">
-                  <strong className="override__title">
-                    We overruled the model on this step
-                  </strong>
-                  {(assessment.overrides ?? []).map((override, index) => (
-                    <p key={index} className="override__line">
-                      <span className="override__change">
-                        <span className="override__kind">{OVERRIDE_KIND[override.kind]}</span>
-                        <s className="override__was">{plainly(override.was)}</s>{" "}
-                        <span aria-hidden="true">&rarr;</span>{" "}
-                        <strong className="override__now">{plainly(override.now)}</strong>
-                      </span>
-                      {override.because}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {assessment.risks.length > 0 && (
-                <p className="verdict__risks">
-                  {assessment.risks.map((risk) => (
-                    <span key={risk} className="chip">
-                      {risk.replace(/_/g, " ")}
-                    </span>
-                  ))}
-                </p>
-              )}
-
-              {assessment.controls.map((control, index) => (
-                <div key={index} className="control">
-                  <strong>{control.kind.replace(/_/g, " ")}</strong>
-                  {control.threshold && (
-                    <span className="control__limit">
-                      {" "}
-                      when {control.threshold.field} {control.threshold.operator}{" "}
-                      {control.threshold.value} {control.threshold.currency ?? ""}
-                    </span>
-                  )}
-                  <p>{control.reason}</p>
-                  {control.who_approves && <p className="control__who">Approver: {control.who_approves}</p>}
-                </div>
-              ))}
-
-              {assessment.blockers.map((blocker, index) => (
-                <div key={index} className="blocker">
-                  <strong>{blocker.kind.replace(/_/g, " ")}</strong>
-                  <p>{blocker.detail}</p>
-                </div>
-              ))}
-              </>
-            )}
-          </article>
+          <div key={verdict} className={`vgroup vgroup--${verdict}`}>
+            <h4 className="vgroup__head">
+              <ThemeIcon size={22} radius="xl" variant="light" color={VERDICT_COLOR[verdict]}>
+                <Pictured size={13} stroke={2.2} />
+              </ThemeIcon>
+              {LABEL[verdict]}
+              <span className="vgroup__count">{items.length}</span>
+            </h4>
+            {items.map(card)}
+          </div>
         );
       })}
     </section>

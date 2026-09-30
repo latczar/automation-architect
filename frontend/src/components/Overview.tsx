@@ -1,6 +1,9 @@
-import { VERDICT_ORDER } from "../labels";
+import { Button, RingProgress, ThemeIcon } from "@mantine/core";
+import { IconChevronRight, IconTrophy } from "@tabler/icons-react";
+
+import { VERDICT_COLOR, VERDICT_ORDER } from "../labels";
 import type { AutomationPlan, ProcessGraph, Verdict } from "../types";
-import { Icon, VERDICT_ICON } from "./Icon";
+import { VERDICT_ICON } from "./Icon";
 
 interface Props {
   graph: ProcessGraph;
@@ -10,13 +13,6 @@ interface Props {
 
 // A step worth starting with has to be one a computer can actually take on.
 const RUNNABLE: Verdict[] = ["fully_automatable", "automatable_with_control"];
-
-const COLOUR: Record<Verdict, string> = {
-  fully_automatable: "var(--auto)",
-  automatable_with_control: "var(--guard)",
-  human_required: "var(--human)",
-  needs_more_info: "var(--unclear)",
-};
 
 const SAYS: Record<Verdict, [string, string]> = {
   fully_automatable: ["runs itself", "run themselves"],
@@ -37,18 +33,10 @@ const RING: Verdict[] = ["fully_automatable", "automatable_with_control", "human
  */
 export function Overview({ graph, plan, onPick }: Props) {
   const total = plan.assessments.length || 1;
-  const counts = VERDICT_ORDER.map((verdict) => ({
-    verdict,
-    count: plan.assessments.filter((a) => a.verdict === verdict).length,
-  })).filter((c) => c.count > 0);
   const count = (v: Verdict) => plan.assessments.filter((a) => a.verdict === v).length;
-
-  let at = 0;
-  const stops = RING.filter((v) => count(v) > 0).map((v) => {
-    const from = at;
-    at += (count(v) / total) * 100;
-    return `${COLOUR[v]} ${from}% ${at}%`;
-  });
+  const counts = VERDICT_ORDER.map((verdict) => ({ verdict, count: count(verdict) })).filter(
+    (c) => c.count > 0,
+  );
 
   // Every time the code overruled the model, counted. It is the thing this
   // tool does that a chatbot would not, so it gets a badge rather than a line.
@@ -65,27 +53,40 @@ export function Overview({ graph, plan, onPick }: Props) {
   return (
     <section className="card answer">
       <div className="score">
-        <div
-          className="ring"
-          style={{ background: `conic-gradient(${stops.join(", ")})` }}
-          role="img"
+        <RingProgress
+          size={104}
+          thickness={9}
+          roundCaps
+          sectionGap={4}
+          rootColor="var(--sunken)"
+          sections={RING.filter((v) => count(v) > 0).map((v) => ({
+            value: (count(v) / total) * 100,
+            color: v === "needs_more_info" ? "gray.5" : VERDICT_COLOR[v],
+          }))}
+          label={
+            <div className="ring__label">
+              <strong>
+                {count("fully_automatable")}/{plan.assessments.length}
+              </strong>
+              <span>hands-off</span>
+            </div>
+          }
           aria-label={`${count("fully_automatable")} of ${plan.assessments.length} steps run themselves`}
-        >
-          <div className="ring__hole">
-            <strong>
-              {count("fully_automatable")}/{plan.assessments.length}
-            </strong>
-            <span>hands-off</span>
-          </div>
-        </div>
+          role="img"
+        />
 
         <ul className="stats">
-          {counts.map(({ verdict, count: n }) => (
-            <li key={verdict} className={`stat stat--${verdict}`}>
-              <Icon name={VERDICT_ICON[verdict]} />
-              <strong>{n}</strong> {SAYS[verdict][n === 1 ? 0 : 1]}
-            </li>
-          ))}
+          {counts.map(({ verdict, count: n }) => {
+            const Pictured = VERDICT_ICON[verdict];
+            return (
+              <li key={verdict} className={`stat stat--${verdict}`}>
+                <ThemeIcon size={26} radius="xl" variant="light" color={VERDICT_COLOR[verdict]}>
+                  <Pictured size={15} stroke={2} />
+                </ThemeIcon>
+                <strong>{n}</strong> {SAYS[verdict][n === 1 ? 0 : 1]}
+              </li>
+            );
+          })}
         </ul>
       </div>
 
@@ -94,20 +95,29 @@ export function Overview({ graph, plan, onPick }: Props) {
       {(caught > 0 || startWith) && (
         <div className="badges">
           {caught > 0 && firstCaught && (
-            <button
-              className="badge badge--caught"
+            <Button
+              size="compact-sm"
+              radius="xl"
+              variant="light"
+              color="guard"
+              leftSection={<IconTrophy size={15} />}
               onClick={() => onPick(firstCaught)}
               title="Where the code overruled the model. Click to see the first one."
             >
-              <Icon name="trophy" />
               {caught} caught by our checks
-            </button>
+            </Button>
           )}
           {startWith && (
-            <button className="badge" onClick={() => onPick(startWith.id)}>
+            <Button
+              size="compact-sm"
+              radius="xl"
+              variant="default"
+              rightSection={<IconChevronRight size={14} />}
+              onClick={() => onPick(startWith.id)}
+              className="badge--start"
+            >
               Start with: {startWith.name}
-              <Icon name="chevron" size={14} />
-            </button>
+            </Button>
           )}
         </div>
       )}

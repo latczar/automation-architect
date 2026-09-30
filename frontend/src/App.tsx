@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ActionIcon, Button } from "@mantine/core";
+import { IconBrandGithub, IconPlus } from "@tabler/icons-react";
 
 import {
   analyse,
@@ -13,8 +15,9 @@ import {
   fetchShare,
   shareIdFromUrl,
 } from "./api";
-import { Canvas, type Tab } from "./components/Canvas";
+import type { Tab } from "./components/Canvas";
 import { Chat, type Round } from "./components/Chat";
+import { BRAND_ICON } from "./components/Icon";
 import { NoPlaybook } from "./components/Library";
 import { Playbook } from "./components/Playbook";
 import { SHORTEST, Start } from "./components/Start";
@@ -34,6 +37,48 @@ import type {
 const MOST_ANSWERS = 12;
 
 const SOURCE = "https://github.com/latczar/automation-architect";
+
+// The blueprint brings the diagram library with it, which is most of the
+// JavaScript on the page. Nobody needs it on the first screen, so it loads
+// while the first answer is being worked out.
+const loadCanvas = () => import("./components/Canvas");
+const Canvas = lazy(() => loadCanvas().then((m) => ({ default: m.Canvas })));
+
+/** The mark and the name, which is also the way back to the start. */
+function Brand({ onClick }: { onClick?: () => void }) {
+  const Mark = BRAND_ICON;
+  const inner = (
+    <>
+      <span className="brand__mark" aria-hidden="true">
+        <Mark size={16} stroke={2} />
+      </span>
+      <span className="brand__name">Automation Architect</span>
+    </>
+  );
+  return onClick ? (
+    <button className="brand brand--home" onClick={onClick} title="Start again">
+      {inner}
+    </button>
+  ) : (
+    <span className="brand">{inner}</span>
+  );
+}
+
+function Source() {
+  return (
+    <ActionIcon
+      component="a"
+      href={SOURCE}
+      variant="subtle"
+      color="gray"
+      size="lg"
+      aria-label="Source on GitHub"
+      title="Source on GitHub"
+    >
+      <IconBrandGithub size={20} stroke={1.7} />
+    </ActionIcon>
+  );
+}
 
 /**
  * Two screens. Before anything is sent, a single question and a box. After,
@@ -243,6 +288,7 @@ export default function App() {
   /** The first round: a description, typed or from an example. */
   function send(text: string, replay: string | undefined) {
     if (text.trim().length < SHORTEST) return;
+    void loadCanvas(); // Fetched during the wait, so the answer is not held up by it.
     setRestored(false);
     setResult(null);
     setTab("map");
@@ -415,10 +461,8 @@ export default function App() {
     return (
       <div className="app">
         <header className="bar bar--start">
-          <span className="bar__brand">Automation Architect</span>
-          <a className="bar__link" href={SOURCE}>
-            Source on GitHub
-          </a>
+          <Brand />
+          <Source />
         </header>
 
         {error && <p className="error start__error">{error}</p>}
@@ -458,9 +502,7 @@ export default function App() {
   return (
     <div className={`app work work--${view}`}>
       <header className="bar">
-        <button className="bar__brand bar__home" onClick={reset} title="Start again">
-          Automation Architect
-        </button>
+        <Brand onClick={reset} />
 
         <div className="bar__switch" role="group" aria-label="Show">
           <button aria-pressed={view === "chat"} onClick={() => show("chat")}>
@@ -476,12 +518,10 @@ export default function App() {
         </div>
 
         <div className="bar__end">
-          <button className="secondary bar__new" onClick={reset}>
+          <Button variant="default" size="sm" leftSection={<IconPlus size={16} />} onClick={reset}>
             New process
-          </button>
-          <a className="bar__link" href={SOURCE}>
-            GitHub
-          </a>
+          </Button>
+          <Source />
         </div>
       </header>
 
@@ -506,41 +546,37 @@ export default function App() {
         />
 
         {graph ? (
-          <Canvas
-            key={version}
-            graph={graph}
-            plan={result?.plan ?? null}
-            blueprint={blueprint}
-            tab={tab}
-            onTab={setTab}
-            selected={selected}
-            onSelect={setSelected}
-            busy={busy}
-            readOnly={Boolean(shared)}
-            onShare={makeShareLink}
-            sharing={sharing}
-            shareUrl={shareUrl}
-            shareExpiry={shareExpiry}
-            onCopyLink={copyLink}
-            linkCopied={copied}
-            onCopy={exportWorkflow}
-            copying={exporting}
-            handoff={handoff}
-            onDownload={downloadWorkflow}
-            effort={shared?.effort ?? null}
-            onEffort={handleEffort}
-            onQuestions={toQuestions}
-          />
+          <Suspense fallback={<Ghost />}>
+            <Canvas
+              key={version}
+              graph={graph}
+              plan={result?.plan ?? null}
+              blueprint={blueprint}
+              tab={tab}
+              onTab={setTab}
+              selected={selected}
+              onSelect={setSelected}
+              busy={busy}
+              readOnly={Boolean(shared)}
+              onShare={makeShareLink}
+              sharing={sharing}
+              shareUrl={shareUrl}
+              shareExpiry={shareExpiry}
+              onCopyLink={copyLink}
+              linkCopied={copied}
+              onCopy={exportWorkflow}
+              copying={exporting}
+              handoff={handoff}
+              onDownload={downloadWorkflow}
+              effort={shared?.effort ?? null}
+              onEffort={handleEffort}
+              onQuestions={toQuestions}
+            />
+          </Suspense>
         ) : (
           <section className="canvas canvas--empty" aria-label="Blueprint">
             {busy ? (
-              <div className="ghost" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-                <p>Your map appears here</p>
-              </div>
+              <Ghost inside />
             ) : (
               <div className="canvas__none">
                 <p>No map this time.</p>
@@ -548,14 +584,34 @@ export default function App() {
                   The reply says what went wrong. Try again, or start from one of the
                   examples.
                 </p>
-                <button className="secondary" onClick={reset}>
+                <Button variant="default" onClick={reset}>
                   Back to the start
-                </button>
+                </Button>
               </div>
             )}
           </section>
         )}
       </div>
     </div>
+  );
+}
+
+/** Where the map will be, while the first one is worked out. */
+function Ghost({ inside = false }: { inside?: boolean }) {
+  const ghost = (
+    <div className="ghost" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+      <span />
+      <p>Your map appears here</p>
+    </div>
+  );
+  return inside ? (
+    ghost
+  ) : (
+    <section className="canvas canvas--empty" aria-label="Blueprint">
+      {ghost}
+    </section>
   );
 }

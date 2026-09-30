@@ -9,7 +9,7 @@ take over, and refuses to call a step safe if it moves money, cannot be undone, 
 carries legal weight. That refusal lives in code, not in the prompt, and a scored eval
 suite checks that it holds.
 
-![The web interface, showing a supplier payment process with two steps flagged as needing a human](docs/screenshot.png)
+![The workbench: a supplier payment process mapped step by step, with the payment and the deletion held back as needing a guard](docs/screenshot.png)
 
 ## The one rule
 

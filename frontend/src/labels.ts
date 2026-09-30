@@ -14,6 +14,14 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
   needs_more_info: "Unclear",
 };
 
+/** The theme colour for each verdict, for the Mantine components that take one. */
+export const VERDICT_COLOR: Record<Verdict, string> = {
+  fully_automatable: "runs",
+  automatable_with_control: "guard",
+  human_required: "human",
+  needs_more_info: "gray",
+};
+
 /**
  * An override's before and after, in the words the rest of the page uses.
  *

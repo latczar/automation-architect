@@ -1,5 +1,8 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { ActionIcon, Button, Loader } from "@mantine/core";
+import { IconAlertTriangle, IconArrowRight, IconArrowUp, IconLink } from "@tabler/icons-react";
 
+import { BRAND_ICON } from "./Icon";
 import type { AnalyseResponse, Answer, Attempt, SharedAnalysis } from "../types";
 import { Overview } from "./Overview";
 import { Questions } from "./Questions";
@@ -63,6 +66,7 @@ export function Chat(props: Props) {
       <div className="chat__scroll">
         {shared && (
           <p className="chat__shared">
+            <IconLink size={16} aria-hidden="true" />
             <strong>A shared analysis.</strong> Created on{" "}
             {new Date(shared.created_at).toLocaleDateString("en-GB")}, and the link stops
             working on {new Date(shared.expires_at).toLocaleDateString("en-GB")}.
@@ -122,10 +126,23 @@ function You({ round }: { round: Round }) {
   );
 }
 
+/** Who is talking: the mark, then the name, as a chat app labels a reply. */
+function Who() {
+  const Mark = BRAND_ICON;
+  return (
+    <span className="reply__who">
+      <span className="reply__mark" aria-hidden="true">
+        <Mark size={12} stroke={2.2} />
+      </span>
+      Automation Architect
+    </span>
+  );
+}
+
 function Past({ round }: { round: Round }) {
   return (
     <div className={`reply reply--past ${round.failed ? "reply--failed" : ""}`}>
-      <span className="reply__who">Automation Architect</span>
+      <Who />
       <p>{round.outcome ?? "Stopped before it finished."}</p>
     </div>
   );
@@ -141,7 +158,7 @@ function Reply(props: Props & { kind: Round["kind"] }) {
 
   return (
     <article className="reply">
-      <span className="reply__who">Automation Architect</span>
+      <Who />
 
       {/* Ten to twenty seconds is a long time to look at nothing. This says what
           is happening, how long it usually takes and how long it has been. */}
@@ -151,6 +168,7 @@ function Reply(props: Props & { kind: Round["kind"] }) {
             <span />
           </div>
           <p className="working__title">
+            <Loader size="xs" type="dots" aria-hidden="true" />
             {WORKING[kind]}
             {elapsed > 0 && (
               <span className="working__clock" aria-hidden="true">
@@ -168,6 +186,7 @@ function Reply(props: Props & { kind: Round["kind"] }) {
 
       {!busy && error && (
         <p className="reply__error">
+          <IconAlertTriangle size={18} aria-hidden="true" />
           {error}
           {graph && " The map beside this is from the last answer that worked."}
         </p>
@@ -213,9 +232,15 @@ function Reply(props: Props & { kind: Round["kind"] }) {
       )}
 
       {!busy && graph && (
-        <button className="reply__see" onClick={props.onShowBlueprint}>
+        <Button
+          className="reply__see"
+          variant="light"
+          fullWidth
+          rightSection={<IconArrowRight size={16} />}
+          onClick={props.onShowBlueprint}
+        >
           See the map and the build plan
-        </button>
+        </Button>
       )}
 
       {!busy && graph && graph.questions.length > 0 && (
@@ -271,11 +296,16 @@ function Detail({ busy, onSend }: { busy: boolean; onSend: (text: string) => voi
       />
       <div className="detail__foot">
         <span className="detail__hint">Added to your description, then mapped again</span>
-        <button className="prompt__send" type="submit" aria-label="Add and map again" disabled={busy}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M12 19V5 M6 11l6-6 6 6" />
-          </svg>
-        </button>
+        <ActionIcon
+          type="submit"
+          size={32}
+          radius="md"
+          variant={ready ? "filled" : "light"}
+          aria-label="Add and map again"
+          disabled={busy}
+        >
+          <IconArrowUp size={17} stroke={2.2} />
+        </ActionIcon>
       </div>
     </form>
   );

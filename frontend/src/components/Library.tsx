@@ -1,5 +1,6 @@
+import { IconBook2 } from "@tabler/icons-react";
+
 import type { LibraryArticle } from "../types";
-import { Icon } from "./Icon";
 import { render } from "./Playbook";
 
 /**
@@ -15,7 +16,7 @@ export function NoPlaybook({ library }: { library: LibraryArticle[] }) {
     // room than the cards that found something.
     <details className="playbook playbook--fold playbook--none">
       <summary>
-        <Icon name="book" />
+        <IconBook2 size={18} aria-hidden="true" />
         <span className="playbook__label">How this job usually goes</span>
         <span className="playbook__title">No article for this job yet</span>
       </summary>

@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
   type Edge as FlowEdge,
+  type FitViewOptions,
   type Node as FlowNode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -20,12 +21,17 @@ const edgeTypes = { routed: RoutedEdge };
 
 // Never past full size. A three-step process would otherwise be blown up to
 // fill the box, and text at 180% looks like a mistake rather than a diagram.
-const FIT = { padding: 0.08, maxZoom: 1 };
+const MAX_ZOOM = 1;
+
+// The margin round the process, in pixels. React Flow takes it as a share of
+// the box, which on a box as tall as a long process is a band of empty space.
+const MARGIN = 28;
 
 // The tallest the box gets, and the shortest. In between it takes the height
-// of the process, so a short one is not a few boxes floating in a large empty
-// frame and a long one is not shrunk further than it has to be.
-const TALLEST = 760;
+// of the process at full size, and the panel scrolls. Shrinking a long process
+// to fit the window made the words too small to read, which is worse than
+// having to scroll to the end of it.
+const TALLEST = 1600;
 const SHORTEST = 300;
 
 interface Props {
@@ -43,7 +49,7 @@ interface Props {
  * process into a corner with an empty half beside it. Common enough to be worth
  * the observer: the panel is half a two-column grid that reflows at 900px.
  */
-function RefitOnResize() {
+function RefitOnResize({ fit }: { fit: FitViewOptions }) {
   const { fitView } = useReactFlow();
   const frame = useRef(0);
 
@@ -55,7 +61,7 @@ function RefitOnResize() {
       // Coalesced into the next frame. A drag-resize fires this continuously,
       // and re-fitting on every pixel is work nobody sees.
       cancelAnimationFrame(frame.current);
-      frame.current = requestAnimationFrame(() => fitView(FIT));
+      frame.current = requestAnimationFrame(() => fitView(fit));
     });
 
     observer.observe(parent);
@@ -63,7 +69,7 @@ function RefitOnResize() {
       cancelAnimationFrame(frame.current);
       observer.disconnect();
     };
-  }, [fitView]);
+  }, [fitView, fit]);
 
   return null;
 }
@@ -115,10 +121,10 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
   }, [graph, plan, selected]);
 
   // How tall the process is at full size, plus the fit padding and the margin
-  // dagre leaves. The stylesheet caps it by the window as well, because this is
-  // pinned beside the verdicts and has to fit on the screen to be any use.
+  // dagre leaves.
   const drawn = Math.max(0, ...nodes.map((node) => node.position.y)) + NODE_HEIGHT;
-  const fits = Math.min(TALLEST, Math.max(SHORTEST, Math.round(drawn * 1.2 + 32)));
+  const fits = Math.min(TALLEST, Math.max(SHORTEST, drawn + 2 * MARGIN));
+  const fit = useMemo(() => ({ padding: MARGIN / fits, maxZoom: MAX_ZOOM }), [fits]);
 
   return (
     <div className="diagram" style={{ "--diagram-fits": `${fits}px` } as CSSProperties}>
@@ -128,7 +134,7 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={FIT}
+        fitViewOptions={fit}
         proOptions={{ hideAttribution: false }}
         onNodeClick={(_, node) => onSelect(node.id)}
         onPaneClick={() => onSelect(null)}
@@ -143,9 +149,9 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
         preventScrolling={false}
         zoomActivationKeyCode="Control"
       >
-        <Background gap={20} size={1} />
+        <Background gap={22} size={1.2} color="#cfd4dc" />
         <Controls showInteractive={false} />
-        <RefitOnResize />
+        <RefitOnResize fit={fit} />
       </ReactFlow>
     </div>
   );
