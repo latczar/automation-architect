@@ -95,7 +95,7 @@ separate requests, so the article still arrives when the model is slow or down.
   will not guess them for you.
 - **Shares a link.** Unguessable id, expires after 30 days.
 - **Hands over to n8n.** A first-draft workflow on your clipboard, laid out left to
-  right, with real IF and Wait nodes. A system you named becomes its real node, set to
+  right, with real IF, Switch and Wait nodes. A system you named becomes its real node, set to
   what the step does and filled in from the process: each field is read from the step
   that produced it. What only you know, such as which spreadsheet, is left empty, and
   each node's note says so. Every setting was checked against n8n's own validation.

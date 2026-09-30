@@ -9,7 +9,8 @@ What it does get right, and what makes it worth exporting at all:
 
   - the shape. Steps, branches and the order they run in, laid out left to
     right the way n8n draws a workflow.
-  - decisions become real IF nodes, set to the test when the branch has one.
+  - decisions become real IF nodes, or Switch nodes for three ways out or more,
+    set to the test when a branch has one.
   - approvals become real Wait nodes, so the pause is in the workflow rather
     than in a paragraph somebody has to remember to read.
   - a threshold approval becomes an IF on the threshold, so "only above 5,000"
@@ -59,6 +60,15 @@ WAIT_NODE = "n8n-nodes-base.wait"
 # Checked against n8n's source: 2.2 is the version whose conditions carry
 # version 2, which is what _threshold_parameters writes.
 IF_VERSION = 2.2
+
+# A decision with three or more ways out. An IF has two outputs, and n8n drops
+# a line from an output a node does not have, so the third branch and every one
+# after it used to vanish on import. 3.2 is the Switch whose rules carry
+# version 2 conditions, the same as the IF's.
+SWITCH_VERSION = 3.2
+
+# n8n shows an output's name beside its dot, so it has to be short.
+OUTPUT_LIMIT = 40
 
 # What to tell someone to put in place of each placeholder.
 REPLACE_WITH: dict[StepKind, str] = {
@@ -286,9 +296,9 @@ def build(graph: ProcessGraph, plan: AutomationPlan | None = None) -> Built:
 
         filled = None
         if step.kind is StepKind.DECISION:
-            edges = branches(graph, step)
-            if len(edges) == 2 and edges[0].condition_test:
-                builder.by_name[body_of[step.id]]["parameters"] = _test(edges[0].condition_test, where)
+            builder.by_name[body_of[step.id]]["parameters"] = _branch_parameters(graph, step, where)
+            if unset := _unset(graph, step):
+                left[step.id] = (unset,)
         else:
             filled = fill(choice_of[step.id], where)
             if filled:
@@ -337,7 +347,7 @@ def step_node(
     """
 
     if step.kind is StepKind.DECISION:
-        return None, IF_NODE
+        return None, SWITCH_NODE if len(graph.outgoing(step.id)) > 2 else IF_NODE
     choice = node_for(step, assessment, graph)
     if choice:
         return choice, choice.type
@@ -349,17 +359,18 @@ def branches(graph: ProcessGraph, step: Step) -> list[Edge]:
 
     An IF sends items where its test is true out of its first output. So when
     only the second branch of two carries a test, the two swap round and the
-    test is the one the IF makes.
+    test is the one the IF makes. A Switch tries its rules in order and sends
+    an item to the first that matches, so the branches with a test go first,
+    in the order they were described, and the rest follow.
     """
 
     outgoing = graph.outgoing(step.id)
-    if (
-        step.kind is StepKind.DECISION
-        and len(outgoing) == 2
-        and not outgoing[0].condition_test
-        and outgoing[1].condition_test
-    ):
+    if step.kind is not StepKind.DECISION:
+        return outgoing
+    if len(outgoing) == 2 and not outgoing[0].condition_test and outgoing[1].condition_test:
         return [outgoing[1], outgoing[0]]
+    if len(outgoing) > 2:
+        return [e for e in outgoing if e.condition_test] + [e for e in outgoing if not e.condition_test]
     return outgoing
 
 
@@ -456,10 +467,10 @@ def _build_step(
     if step.kind is StepKind.DECISION:
         body = builder.add(
             _shorten(step.name),
-            IF_NODE,
+            node_type,
             parameters=_branch_parameters(graph, step),
-            type_version=IF_VERSION,
-            outputs=2,
+            type_version=SWITCH_VERSION if node_type == SWITCH_NODE else IF_VERSION,
+            outputs=max(2, len(graph.outgoing(step.id))),
         )
     else:
         # A real node where the description named a system we recognise, a
@@ -478,20 +489,77 @@ def _build_step(
     return body, body
 
 
-def _branch_parameters(graph: ProcessGraph, step: Step) -> dict:
-    """The IF's test, when the branch was described as one it can check."""
+def _branch_parameters(graph: ProcessGraph, step: Step, where: Where | None = None) -> dict:
+    """What a branch tests, from each branch that was described as a check.
+
+    Two ways out make an IF on the first branch's test. More make a Switch
+    with a rule per branch. When exactly one branch has no test, it is the
+    "anything else" of the others, and becomes the Switch's fallback output
+    rather than a rule nobody can write.
+    """
 
     edges = branches(graph, step)
-    if len(edges) == 2 and edges[0].condition_test:
-        return _threshold_parameters(edges[0].condition_test)
-    return {}
+    if len(edges) <= 2:
+        first = edges[0].condition_test if edges else None
+        return _threshold_parameters(first, _source(first, where)) if len(edges) == 2 and first else {}
+
+    untested = [e for e in edges if not e.condition_test]
+    fallback = untested[0] if len(untested) == 1 else None
+
+    rules = []
+    for index, edge in enumerate(e for e in edges if e is not fallback):
+        if edge.condition_test:
+            conditions = _threshold_parameters(edge.condition_test, _source(edge.condition_test, where))["conditions"]
+            conditions["conditions"][0]["id"] = f"branch-{index + 1}"
+        else:
+            conditions = {**_threshold_parameters(None)["conditions"], "conditions": []}
+        rules.append(
+            {
+                "conditions": conditions,
+                "renameOutput": True,
+                "outputKey": _output_name(edge, index),
+            }
+        )
+
+    options: dict[str, Any] = {}
+    if fallback:
+        options = {"fallbackOutput": "extra", "renameFallbackOutput": _output_name(fallback, len(rules))}
+    return {"mode": "rules", "rules": {"values": rules}, "options": options}
+
+
+def _output_name(edge: Edge, index: int) -> str:
+    return _shorten(edge.condition or f"Branch {index + 1}", OUTPUT_LIMIT)
+
+
+def _unset(graph: ProcessGraph, step: Step) -> str | None:
+    """What is left to set in a branch, or None when every test is in place."""
+
+    edges = branches(graph, step)
+    if len(edges) <= 2:
+        if len(edges) == 2 and edges[0].condition_test:
+            return None
+        return "Set the check it makes, so each branch gets the right items."
+
+    untested = [e for e in edges if not e.condition_test]
+    if len(untested) <= 1:
+        return None
+    names = [f'"{e.condition}"' for e in untested if e.condition]
+    listed = f"{', '.join(names[:-1])} and {names[-1]}" if len(names) > 1 else "".join(names)
+    return f"Set the check for {listed}, so each branch gets the right items."
+
+
+def _source(threshold: Threshold | None, where: Where | None) -> str | None:
+    """Where a test's value comes from: the earlier step that produced it."""
+
+    if not threshold or not where:
+        return None
+    return value_of(DataItem(name=threshold.field, data_type=threshold.value_type), where)
 
 
 def _test(threshold: Threshold, where: Where) -> dict:
     """The same test, reading its value from the earlier step that produced it."""
 
-    source = value_of(DataItem(name=threshold.field, data_type=threshold.value_type), where)
-    return _threshold_parameters(threshold, source)
+    return _threshold_parameters(threshold, _source(threshold, where))
 
 
 def _trigger_parameters(graph: ProcessGraph) -> dict:
@@ -537,10 +605,10 @@ def _step_notes(
 
     if step.kind is StepKind.DECISION:
         edges = branches(graph, step)
-        labels = ("True", "False") if len(edges) == 2 else [f"Output {i + 1}" for i in range(len(edges))]
-        lines.extend(f"{label}: {edge.condition}" for label, edge in zip(labels, edges))
-        if not _branch_parameters(graph, step):
-            lines.append("Left to do: set the check it makes, so each branch gets the right items.")
+        if len(edges) == 2:
+            lines.extend(f"{label}: {edge.condition}" for label, edge in zip(("True", "False"), edges))
+        if unset := _unset(graph, step):
+            lines.append(f"Left to do: {unset}")
     elif filled:
         if filled.left:
             lines.append("Left to do: " + " ".join(filled.left))
@@ -563,19 +631,23 @@ def _approval_notes(who: str | None, reason: str) -> str:
     return "\n".join(lines)
 
 
-def _threshold_parameters(threshold: Threshold, source: str | None = None) -> dict:
-    """An IF node condition built from our structured threshold.
+def _threshold_parameters(threshold: Threshold | None, source: str | None = None) -> dict:
+    """An IF node condition built from our structured threshold, or an empty one.
 
-    The condition's own version has to match the node's: IF 2.2 reads version 2
-    conditions, and an older version number opens them in the older editor.
+    The condition's own version has to match the node's: IF 2.2 and Switch 3.2
+    read version 2 conditions, and an older number opens them in the older editor.
     """
+
+    options = {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 2}
+    if threshold is None:
+        return {"conditions": {"options": options, "conditions": [], "combinator": "and"}, "options": {}}
 
     numeric = threshold.value_type in (DataType.NUMBER, DataType.MONEY)
     operator = OPERATOR_MAP.get(threshold.operator, "equals")
 
     return {
         "conditions": {
-            "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict", "version": 2},
+            "options": options,
             "conditions": [
                 {
                     "id": "threshold",

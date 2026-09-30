@@ -22,6 +22,7 @@ from app.export_n8n import (
     IF_NODE,
     NO_OP,
     REPLACE_WITH,
+    SWITCH_NODE,
     approval_gate,
     build,
     step_node,
@@ -40,7 +41,7 @@ class Hookup(BaseModel):
     name: str
     kind: StepKind
     verdict: Verdict | None = None
-    # The ready-made node's name, e.g. "Google Sheets", or "IF" for a branch.
+    # The ready-made node's name, e.g. "Google Sheets", or "IF" or "Switch" for a branch.
     # None means a placeholder that says what belongs there.
     node: str | None = None
     # What n8n itself calls the node, for anybody who wants the detail.
@@ -146,6 +147,9 @@ WORDS: dict[ComparisonOperator, str] = {
 
 SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
 
+# What each kind of branch node is called on the page.
+BRANCH_LABELS = {IF_NODE: "IF", SWITCH_NODE: "Switch"}
+
 # Steps that are placeholders because nothing was named, and that somebody
 # therefore has to fill in. A judgement, a branch or a wait is not one of these.
 FILLABLE = (StepKind.READ, StepKind.EXTRACT, StepKind.TRANSFORM, StepKind.WRITE, StepKind.NOTIFY)
@@ -189,7 +193,7 @@ def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Bluepri
         choice, node_type = step_node(step, assessment, graph)
         if choice:
             chosen[step.id] = choice
-        node = "IF" if node_type == IF_NODE else choice.label if choice else None
+        node = BRANCH_LABELS.get(node_type) or (choice.label if choice else None)
 
         limited = gate is not None and gate.kind is ControlKind.THRESHOLD_APPROVAL
         hookups.append(
@@ -305,13 +309,16 @@ def _tasks(
         )
     )
 
-    branches = [h for h in hookups if h.node_type == IF_NODE]
+    branches = [h for h in hookups if h.node_type in BRANCH_LABELS]
     if branches:
+        kinds = sorted({h.node for h in branches if h.node}, key=["IF", "Switch"].index)
+        one = "an IF node" if kinds == ["IF"] else "a Switch node" if kinds == ["Switch"] else "IF and Switch nodes"
+        many = " and ".join(f"{k} nodes" for k in kinds) if len(kinds) > 1 else f"{kinds[0]} nodes"
         tasks.append(
             Task(
                 status="done",
                 kind="branch",
-                title=_plural(len(branches), "branch, as an IF node", "branches, as IF nodes"),
+                title=_plural(len(branches), f"branch, as {one}", f"branches, as {many}"),
                 detail="Where you said \"if\", the workflow splits the same way.",
             )
         )
@@ -340,7 +347,9 @@ def _tasks(
                 )
             )
 
-    ready = sorted({h.node for h in hookups if h.node and h.node_type != IF_NODE} | ({trigger} if trigger else set()))
+    ready = sorted(
+        {h.node for h in hookups if h.node and h.node_type not in BRANCH_LABELS} | ({trigger} if trigger else set())
+    )
     if ready:
         tasks.append(
             Task(

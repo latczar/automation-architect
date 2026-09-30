@@ -273,6 +273,47 @@ def _missing(missing: list[str]) -> tuple[str, ...]:
 # --- Gmail --------------------------------------------------------------------
 
 REPLY = re.compile(r"\b(reply|replies|respond|responds|answer|get back)\b")
+SENDS = re.compile(r"\b(send|sends|sent|email|emails|forward|forwards|reply|replies|respond|tell|notify|confirm)\b")
+
+# Things a step does to an email already in the inbox. Checked before sending,
+# because "archive the email" has the word email in it and is not a send.
+MARK_READ = re.compile(r"\bmark(s|ed)?\b.*\bread\b")
+PUT_AWAY = re.compile(r"\b(archive[sd]?|archiving|delete[sd]?|deleting|bin|trash)\b")
+DELETES = re.compile(r"\b(delete[sd]?|deleting|bin|trash)\b")
+LABEL = re.compile(r"\b(label(s|led)?|tag(s|ged)?|folder)\b")
+ATTACHMENT = re.compile(r"\battachments?\b")
+
+
+def _in_the_inbox(text: str, where: Where) -> Filled | None:
+    """A Gmail step that changes an email rather than sending one, or None.
+
+    Left unset, any of these opened as a send, and a step meant to tidy the
+    inbox would have emailed somebody instead.
+    """
+
+    email = f"={{{{ {_from(where.email)}.id }}}}" if where.email else ""
+    left: list[str] = [] if where.email else ["Fill in which email it acts on."]
+
+    def done(operation: str, **extra: Any) -> Filled:
+        return Filled({"resource": "message", "operation": operation, "messageId": email, **extra}, tuple(left))
+
+    if MARK_READ.search(text):
+        return done("markAsRead")
+    if PUT_AWAY.search(text):
+        # Archived, never deleted: Gmail's delete skips the bin, and nothing
+        # gets it back. Somebody who wants that can choose it knowing so.
+        if DELETES.search(text):
+            left.append(
+                "It archives the email rather than deleting it, because a deleted email "
+                "cannot be got back. Switch the operation to Delete if you want it gone for good."
+            )
+        return done("removeLabels", labelIds=["INBOX"])
+    if LABEL.search(text):
+        left.append("Pick the label.")
+        return done("addLabels", labelIds=[])
+    if ATTACHMENT.search(text):
+        return done("get", simple=False, options={"downloadAttachments": True})
+    return None
 SENDER = re.compile(r"\b(customer|client|sender|applicant|enquirer|tenant|buyer|vendor|landlord)s?\b")
 DRAFTED = "Read the drafted message and put it in your own words before switching it on."
 
@@ -309,6 +350,26 @@ def _gmail(where: Where) -> Filled:
                 ),
             ),
         )
+
+    if step.kind is StepKind.WRITE:
+        if changed := _in_the_inbox(text, where):
+            return changed
+        if not SENDS.search(text):
+            # Nothing says what it does to the inbox, and a send is the one
+            # guess that can reach somebody else. Fetching changes nothing.
+            return Filled(
+                {
+                    "resource": "message",
+                    "operation": "get",
+                    "messageId": f"={{{{ {_from(where.email)}.id }}}}" if where.email else "",
+                    "simple": False,
+                    "options": {},
+                },
+                (
+                    "Set the operation this step needs. It fetches the email for now, which changes nothing.",
+                    *(() if where.email else ("Fill in which email it acts on.",)),
+                ),
+            )
 
     lines, missing = _details(where, email=True)
     message = "=Hello,\n\n" + "\n".join(lines) if lines else ""

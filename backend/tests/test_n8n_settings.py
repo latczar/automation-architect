@@ -162,6 +162,53 @@ def test_names_match_whatever_the_spelling():
     assert '$("Extract enquiry details").item.json["customer name"]' in columns["value"]["Customer_Name"]
 
 
+# --- Changing an email rather than sending one --------------------------------
+
+
+def tidied(name: str) -> dict:
+    """The parameters of one more Gmail step, after the reply, that does something to the email."""
+
+    graph = enquiries()
+    graph.steps.append(Step(id="tidy", name=name, description=name, kind=StepKind.WRITE, system_id="gmail"))
+    graph.edges.append(Edge(from_step="reply", to_step="tidy"))
+    return node(to_n8n(graph), name)
+
+
+@pytest.mark.parametrize(
+    "name, operation",
+    [
+        ("Archive the email", "removeLabels"),
+        ("Delete the email", "removeLabels"),
+        ("Mark the email as read", "markAsRead"),
+        ("Label the email as an enquiry", "addLabels"),
+        ("Save the PDF attachment", "get"),
+        ("Update the record", "get"),
+    ],
+)
+def test_a_gmail_step_that_changes_an_email_is_never_a_send(name, operation):
+    """Left unset, each of these opened as a send, and tidying the inbox would email somebody."""
+
+    tidy = tidied(name)["parameters"]
+    assert tidy["operation"] == operation
+    assert "Check Gmail for new enquiry" in tidy["messageId"]
+
+
+def test_archiving_takes_the_email_out_of_the_inbox():
+    assert tidied("Archive the email")["parameters"]["labelIds"] == ["INBOX"]
+
+
+def test_deleting_archives_instead_and_says_why():
+    """Gmail's delete skips the bin. Choosing that is the person's call, not ours."""
+
+    tidy = tidied("Delete the email")
+    assert tidy["parameters"]["operation"] != "delete"
+    assert "cannot be got back" in tidy["notes"]
+
+
+def test_saving_an_attachment_downloads_it():
+    assert tidied("Save the PDF attachment")["parameters"]["options"] == {"downloadAttachments": True}
+
+
 # --- Messages -----------------------------------------------------------------
 
 
@@ -271,6 +318,81 @@ def test_the_tested_branch_takes_the_ifs_true_output():
 
     assert outputs[0][0]["node"] == "Give it to an agent"
     assert outputs[1][0]["node"] == "Give it to a partner"
+
+
+def within(days: int) -> Threshold:
+    return Threshold(field="days until due", operator=ComparisonOperator.LTE, value=str(days),
+                     value_type=DataType.NUMBER)
+
+
+TWO_DAYS = within(2)
+
+
+def triage(later: Threshold | None = None, soon: Threshold | None = TWO_DAYS) -> ProcessGraph:
+    """Three ways out of one decision. The first is listed without a test."""
+
+    return ProcessGraph(
+        title="Invoice triage", summary="Sorted by how soon they are due.",
+        trigger=Trigger(kind=TriggerKind.MANUAL, description="By hand", first_step_id="read"),
+        steps=[
+            Step(id="read", name="Note when it is due", description="From the invoice.",
+                 kind=StepKind.EXTRACT, outputs=[item("days until due", DataType.NUMBER)]),
+            Step(id="urgency", name="How urgent is it?", description="By due date.", kind=StepKind.DECISION),
+            Step(id="now", name="Pay it today", description="...", kind=StepKind.JUDGEMENT),
+            Step(id="week", name="Pay it this week", description="...", kind=StepKind.JUDGEMENT),
+            Step(id="later", name="File it for later", description="...", kind=StepKind.JUDGEMENT),
+        ],
+        edges=[
+            Edge(from_step="read", to_step="urgency"),
+            Edge(from_step="urgency", to_step="later", condition="due later than that", condition_test=later),
+            Edge(from_step="urgency", to_step="now", condition="due within 2 days", condition_test=soon),
+            Edge(from_step="urgency", to_step="week", condition="due within a week", condition_test=within(7)),
+        ],
+    )
+
+
+def test_three_ways_out_become_a_switch_with_every_branch_wired():
+    """An IF has two outputs, and n8n drops a line from an output that is not there."""
+
+    workflow = to_n8n(triage())
+    switch = node(workflow, "How urgent is it?")
+    outputs = workflow["connections"]["How urgent is it?"]["main"]
+
+    assert switch["type"] == "n8n-nodes-base.switch"
+    assert [o[0]["node"] for o in outputs] == ["Pay it today", "Pay it this week", "File it for later"]
+
+
+def test_each_branch_with_a_test_is_a_rule_and_the_one_without_is_the_fallback():
+    parameters = node(to_n8n(triage()), "How urgent is it?")["parameters"]
+    rules = parameters["rules"]["values"]
+
+    # Tried in order, so "within 2 days" gets its chance before "within a week".
+    assert [r["outputKey"] for r in rules] == ["due within 2 days", "due within a week"]
+    assert [r["conditions"]["conditions"][0]["rightValue"] for r in rules] == [2, 7]
+    assert '$("Note when it is due").item.json["days until due"]' in rules[0]["conditions"]["conditions"][0]["leftValue"]
+    assert parameters["options"] == {"fallbackOutput": "extra", "renameFallbackOutput": "due later than that"}
+
+
+def test_branches_with_no_test_are_left_to_set_and_said_so():
+    workflow = to_n8n(triage(soon=None))
+    switch = node(workflow, "How urgent is it?")
+
+    assert "fallbackOutput" not in switch["parameters"]["options"]
+    assert '"due later than that" and "due within 2 days"' in switch["notes"]
+    fill = next(t for t in build_blueprint(triage(soon=None), None).tasks if t.title == 'Finish "How urgent is it?"')
+    assert "due within 2 days" in fill.detail
+
+
+def test_every_branch_tested_needs_nothing_more():
+    switch = node(to_n8n(triage(later=Threshold(field="days until due", operator=ComparisonOperator.GT, value="7",
+                                                 value_type=DataType.NUMBER))), "How urgent is it?")
+    assert len(switch["parameters"]["rules"]["values"]) == 3
+    assert "Left to do" not in switch["notes"]
+
+
+def test_the_build_list_calls_it_a_switch():
+    branch = next(t for t in build_blueprint(triage(), None).tasks if t.kind == "branch")
+    assert branch.title == "1 branch, as a Switch node"
 
 
 # --- Shape --------------------------------------------------------------------

@@ -9,13 +9,14 @@ import pytest
 from app.api import EXAMPLES
 from app.assess import assess_process
 from app.blueprint import CHOICES, build_blueprint, limit_text
-from app.export_n8n import IF_NODE, NO_OP, WAIT_NODE, to_n8n
+from app.export_n8n import IF_NODE, NO_OP, SWITCH_NODE, WAIT_NODE, to_n8n
 from app.extract import extract_process
 from app.llm.record import ReplayLLM
 from app.schemas.assessment import Verdict
 from app.schemas.common import ComparisonOperator, DataType, System, SystemCategory, Threshold
 from app.schemas.process import StepKind
 from tests.test_export_n8n import approval, branching_graph, plan_with, threshold_approval
+from tests.test_n8n_settings import triage
 
 
 def recorded(case: str):
@@ -31,6 +32,7 @@ def cases():
     yield "limit", branching_graph(), plan_with([threshold_approval()])
     for case in ("invoice-with-approval", "payment-no-approval"):
         yield case, *recorded(case)
+    yield "three ways out", triage(), None
 
 
 @pytest.mark.parametrize("label, graph, plan", list(cases()), ids=lambda v: v if isinstance(v, str) else "")
@@ -40,10 +42,12 @@ def test_it_describes_exactly_the_workflow_the_export_builds(label, graph, plan)
     types = [n["type"] for n in workflow["nodes"]]
 
     limits = [h for h in blueprint.approvals if h.gate == "limit"]
-    branches = [h for h in blueprint.inside + [s for p in blueprint.places for s in p.steps] if h.node_type == IF_NODE]
+    steps = blueprint.inside + [s for p in blueprint.places for s in p.steps]
+    branches = [h for h in steps if h.node_type == IF_NODE]
 
     assert types.count(WAIT_NODE) == len(blueprint.approvals)
     assert types.count(IF_NODE) == len(branches) + len(limits)
+    assert types.count(SWITCH_NODE) == len([h for h in steps if h.node_type == SWITCH_NODE])
 
     # The ready-made nodes it says the file contains are the ones it contains.
     exported = {t for t in types[1:] if t not in (IF_NODE, WAIT_NODE, NO_OP)}
