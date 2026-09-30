@@ -33,6 +33,7 @@ from app.n8n_catalogue import (
     SEND_EMAIL,
     SET,
     SLACK,
+    WHATSAPP,
     NodeChoice,
 )
 from app.schemas.common import DataItem, DataType
@@ -105,6 +106,8 @@ def fill(choice: NodeChoice | None, where: Where) -> Filled | None:
         return _sheets(where)
     if choice is SLACK:
         return _slack(where)
+    if choice is WHATSAPP:
+        return _whatsapp(where)
     if choice is SEND_EMAIL:
         return _send_email(where)
     if choice is HTTP:
@@ -546,6 +549,47 @@ def _slack(where: Where) -> Filled:
             ),
             "text": text,
             "otherOptions": {"includeLinkToWorkflow": False},
+        },
+        (*left, *_missing(missing)),
+    )
+
+
+# --- WhatsApp -----------------------------------------------------------------
+
+
+def _whatsapp(where: Where) -> Filled:
+    """A plain text message from a WhatsApp Business number.
+
+    An empty WhatsApp node opens on sending a template, which needs one
+    approved by Meta first. A plain message needs nothing approved, but only
+    reaches somebody who has messaged the business number in the last day,
+    and the note says so rather than leave it to be found out.
+    """
+
+    lines, missing = _details(where)
+    text = f"=*{where.graph.title}*\n" + "\n".join(lines) if lines else ""
+
+    number = next(
+        (value_of(i, where) for i in carried(where) if i.data_type is DataType.PHONE_NUMBER), None
+    )
+    left = ["Pick the business number it sends from."]
+    if not number:
+        left.append("Fill in the number it goes to, with the country code, such as 44 for the UK.")
+    left.append(DRAFTED if text else "Write the message.")
+    left.append(
+        "A plain message only reaches somebody who has messaged your business number in "
+        "the last 24 hours. For anyone else, switch it to Send Template and use one Meta has approved."
+    )
+
+    return Filled(
+        {
+            "resource": "message",
+            "operation": "send",
+            "phoneNumberId": "",
+            "recipientPhoneNumber": f"={number}" if number else "",
+            "messageType": "text",
+            "textBody": text,
+            "additionalFields": {},
         },
         (*left, *_missing(missing)),
     )

@@ -71,6 +71,15 @@ SLACK = NodeChoice(
     "Sign in with a Slack credential.",
     version=2.2,
 )
+WHATSAPP = NodeChoice(
+    "n8n-nodes-base.whatsApp",
+    "WhatsApp",
+    (
+        "Sign in with a WhatsApp Business Cloud credential, which needs a Meta business "
+        "account. It sends from that business number, not from your own WhatsApp."
+    ),
+    version=1,
+)
 SEND_EMAIL = NodeChoice(
     "n8n-nodes-base.emailSend",
     "Send Email",
@@ -104,6 +113,7 @@ BY_SYSTEM: tuple[tuple[tuple[str, ...], tuple[StepKind, ...], NodeChoice], ...] 
     (("google sheet", "google sheets", "gsheet"), (StepKind.READ, StepKind.WRITE, StepKind.TRANSFORM), GOOGLE_SHEETS),
     (("slack",), (StepKind.NOTIFY, StepKind.WRITE), SLACK),
     (GMAIL_NAMES, (StepKind.READ, StepKind.WRITE, StepKind.NOTIFY), GMAIL),
+    (("whatsapp", "whats app"), (StepKind.NOTIFY, StepKind.WRITE), WHATSAPP),
 )
 
 # Weaker, so only used where the systems said nothing useful.

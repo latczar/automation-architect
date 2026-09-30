@@ -19,6 +19,7 @@ from app.n8n_catalogue import (
     SEND_EMAIL,
     SET,
     SLACK,
+    WHATSAPP,
 )
 from app.schemas.assessment import AutomationPlan, Confidence, StepAssessment, ToolMatch, Verdict
 from app.schemas.common import (
@@ -242,6 +243,48 @@ def test_an_email_does_not_list_the_recipient_their_own_address():
     assert "Customer email:" not in send["message"]
 
 
+def whatsapped(inputs: list[DataItem] | None = None) -> dict:
+    graph = enquiries(reply=False)
+    graph.systems.append(System(id="phone", name="WhatsApp", category=SystemCategory.CHAT))
+    graph.steps.append(
+        Step(id="ping", name="Send to WhatsApp", description="Send a notification to my WhatsApp.",
+             kind=StepKind.NOTIFY, system_id="phone", inputs=inputs or [])
+    )
+    graph.edges.append(Edge(from_step="log", to_step="ping"))
+    return node(to_n8n(graph), "Send to WhatsApp")
+
+
+def test_a_named_whatsapp_sends_a_plain_message_not_a_template():
+    """Empty, n8n's WhatsApp node opens on sending a template, which Meta has to approve first."""
+
+    ping = whatsapped()
+    assert ping["type"] == WHATSAPP.type
+    assert ping["parameters"]["operation"] == "send"
+    assert ping["parameters"]["messageType"] == "text"
+    assert "Preferred date:" in ping["parameters"]["textBody"]
+
+
+def test_whatsapp_says_what_it_needs_before_it_will_reach_anyone():
+    notes = whatsapped()["notes"]
+    assert "Fill in the number it goes to" in notes
+    assert "last 24 hours" in notes
+
+
+def test_a_phone_number_among_the_details_is_who_it_goes_to():
+    graph = enquiries(reply=False)
+    graph.steps[1].outputs.append(item("customer phone", DataType.PHONE_NUMBER))
+    graph.systems.append(System(id="phone", name="WhatsApp", category=SystemCategory.CHAT))
+    graph.steps.append(
+        Step(id="ping", name="Message them on WhatsApp", description="Say we got it.",
+             kind=StepKind.NOTIFY, system_id="phone", inputs=[item("customer phone", DataType.PHONE_NUMBER)])
+    )
+    graph.edges.append(Edge(from_step="log", to_step="ping"))
+    ping = node(to_n8n(graph), "Message them on WhatsApp")
+
+    assert '$("Extract enquiry details").item.json["customer phone"]' in ping["parameters"]["recipientPhoneNumber"]
+    assert "Fill in the number" not in ping["notes"]
+
+
 def test_a_channel_named_in_the_description_is_filled_in():
     graph = enquiries(reply=False)
     graph.systems.append(SLACK_CHAT)
@@ -418,7 +461,10 @@ def test_branches_sit_one_above_the_other():
     assert partner[1] < agent[1]
 
 
-CHECKED = {c.type: c.version for c in (GMAIL, GMAIL_TRIGGER, GOOGLE_SHEETS, SLACK, SEND_EMAIL, HTTP, CODE, SET)}
+CHECKED = {
+    c.type: c.version
+    for c in (GMAIL, GMAIL_TRIGGER, GOOGLE_SHEETS, SLACK, WHATSAPP, SEND_EMAIL, HTTP, CODE, SET)
+}
 
 
 @pytest.mark.parametrize("graph", [enquiries(), enquiries(trigger_in="the inbox"), branching(True)])

@@ -44,6 +44,7 @@ def step_in(
 SHEETS = System(id="the_sheet", name="Google Sheet", category=SystemCategory.SPREADSHEET)
 SLACK = System(id="team_chat", name="Slack", category=SystemCategory.CHAT)
 GMAIL = System(id="mailbox", name="Gmail", category=SystemCategory.EMAIL)
+WHATSAPP_CHAT = System(id="phone", name="WhatsApp", category=SystemCategory.CHAT)
 VAGUE_SHEET = System(id="the_sheet", name="spreadsheet", category=SystemCategory.SPREADSHEET)
 VAGUE_MAIL = System(id="mailbox", name="Email", category=SystemCategory.EMAIL)
 
@@ -70,6 +71,11 @@ def test_a_named_gmail_becomes_a_gmail_node():
 
 
 # --- Where they did not ------------------------------------------------------
+
+
+def test_a_named_whatsapp_becomes_a_whatsapp_node():
+    step, graph = step_in("Send to WhatsApp", StepKind.NOTIFY, WHATSAPP_CHAT)
+    assert choose_node(step, graph, None).type == "n8n-nodes-base.whatsApp"
 
 
 def test_an_unnamed_spreadsheet_stays_a_placeholder():
