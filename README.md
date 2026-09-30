@@ -94,8 +94,11 @@ separate requests, so the article still arrives when the model is slow or down.
 - **Does the time arithmetic with your numbers.** How often, how long per step. It
   will not guess them for you.
 - **Shares a link.** Unguessable id, expires after 30 days.
-- **Hands over to n8n.** A skeleton workflow on your clipboard, with real IF and Wait
-  nodes, and labelled placeholders wherever a guess would be wrong.
+- **Hands over to n8n.** A first-draft workflow on your clipboard, laid out left to
+  right, with real IF and Wait nodes. A system you named becomes its real node, set to
+  what the step does and filled in from the process: each field is read from the step
+  that produced it. What only you know, such as which spreadsheet, is left empty, and
+  each node's note says so. Every setting was checked against n8n's own validation.
 - **Shows how it connects, and what is left to build.** A map from the trigger through
   the workflow to each system and back to you, and a checklist that separates what the
   export already did from what you still have to do or decide. Both come from the same

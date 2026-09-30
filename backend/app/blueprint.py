@@ -22,10 +22,10 @@ from app.export_n8n import (
     IF_NODE,
     NO_OP,
     REPLACE_WITH,
-    TRIGGER_NAMES,
-    TRIGGER_TYPES,
     approval_gate,
-    node_for,
+    build,
+    step_node,
+    trigger_node,
 )
 from app.n8n_catalogue import NodeChoice
 from app.schemas.assessment import AutomationPlan, ControlKind, Verdict
@@ -173,6 +173,10 @@ def limit_text(threshold: Threshold) -> str:
 
 def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Blueprint:
     assessments = {a.step_id: a for a in (plan.assessments if plan else [])}
+    # What is left in each node, read off the file itself rather than worked
+    # out a second time, so the checklist cannot drift from the export.
+    built = build(graph, plan)
+    trigger_label, trigger_type, trigger = trigger_node(graph)
 
     hookups: list[Hookup] = []
     # The ready-made node each step became, kept so a system can say what
@@ -182,13 +186,10 @@ def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Bluepri
         assessment = assessments.get(step.id)
         gate = approval_gate(assessment)
 
-        if step.kind is StepKind.DECISION:
-            node, node_type = "IF", IF_NODE
-        else:
-            choice = node_for(step, assessment, graph)
-            if choice:
-                chosen[step.id] = choice
-            node, node_type = (choice.label, choice.type) if choice else (None, NO_OP)
+        choice, node_type = step_node(step, assessment, graph)
+        if choice:
+            chosen[step.id] = choice
+        node = "IF" if node_type == IF_NODE else choice.label if choice else None
 
         limited = gate is not None and gate.kind is ControlKind.THRESHOLD_APPROVAL
         hookups.append(
@@ -211,6 +212,20 @@ def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Bluepri
     for system in graph.systems:
         here = [h for h in hookups if system_of[h.step_id] == system.id]
         choice = next((chosen[h.step_id] for h in here if h.step_id in chosen), None)
+        watched = trigger is not None and graph.trigger.system_id == system.id
+        if not choice and watched:
+            choice = trigger
+
+        # Signing in once, then what is left in each of its nodes, in order.
+        setup: list[str] = []
+        for line in [
+            *([choice.note] if choice else []),
+            *(built.trigger_left if watched else ()),
+            *(line for h in here for line in built.left.get(h.step_id, ())),
+        ]:
+            if line not in setup:
+                setup.append(line)
+
         places.append(
             Place(
                 id=system.id,
@@ -219,7 +234,7 @@ def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Bluepri
                 notes=system.notes,
                 steps=here,
                 node=choice.label if choice else None,
-                setup=choice.note if choice else CHOICES.get(system.category, ANYTHING_ELSE),
+                setup=" ".join(setup) if choice else CHOICES.get(system.category, ANYTHING_ELSE),
             )
         )
 
@@ -232,15 +247,18 @@ def build_blueprint(graph: ProcessGraph, plan: AutomationPlan | None) -> Bluepri
 
     return Blueprint(
         trigger=graph.trigger.description,
-        trigger_node=TRIGGER_NAMES.get(graph.trigger.kind, "Start"),
-        trigger_type=TRIGGER_TYPES.get(graph.trigger.kind, "n8n-nodes-base.manualTrigger"),
+        trigger_node=trigger_label,
+        trigger_type=trigger_type,
         watches=watches,
         places=places,
         inside=inside,
         approvals=approvals,
         with_you=with_you,
         unclear=unclear,
-        tasks=_tasks(graph, hookups, places, inside, approvals, with_you, unclear),
+        tasks=_tasks(
+            graph, hookups, places, inside, approvals, with_you, unclear,
+            built.left, trigger.label if trigger else None,
+        ),
     )
 
 
@@ -262,6 +280,8 @@ def _tasks(
     approvals: list[Hookup],
     with_you: list[Hookup],
     unclear: list[Hookup],
+    left: dict[str, tuple[str, ...]],
+    trigger: str | None,
 ) -> list[Task]:
     """The checklist, in the order somebody would actually work through it.
 
@@ -320,7 +340,7 @@ def _tasks(
                 )
             )
 
-    ready = sorted({h.node for h in hookups if h.node and h.node_type != IF_NODE})
+    ready = sorted({h.node for h in hookups if h.node and h.node_type != IF_NODE} | ({trigger} if trigger else set()))
     if ready:
         tasks.append(
             Task(
@@ -331,7 +351,10 @@ def _tasks(
                     if len(ready) == 1
                     else f"Ready-made nodes for {', '.join(ready[:-1])} and {ready[-1]}"
                 ),
-                detail="Picked because you named the system. Each still needs signing in to.",
+                detail=(
+                    "Picked because you named the system, and set to what each step does. "
+                    "Each still needs signing in to."
+                ),
             )
         )
 
@@ -378,7 +401,18 @@ def _tasks(
     for hookup in inside:
         # A step a person keeps gets "keep it with a person" below, not also a
         # node to fill in: the two would contradict each other on one line apiece.
-        if hookup.node is None and hookup.kind in FILLABLE and hookup.verdict is not Verdict.HUMAN_REQUIRED:
+        if hookup.verdict is Verdict.HUMAN_REQUIRED:
+            continue
+        if hookup.step_id in left:
+            tasks.append(
+                Task(
+                    status="todo",
+                    kind="fill",
+                    title=f"Finish \"{hookup.name}\"" if hookup.node else f"Fill in \"{hookup.name}\"",
+                    detail=" ".join(left[hookup.step_id]),
+                )
+            )
+        elif hookup.node_type == NO_OP and hookup.kind in FILLABLE:
             tasks.append(
                 Task(
                     status="todo",
