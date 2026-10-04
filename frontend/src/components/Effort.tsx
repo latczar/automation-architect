@@ -34,9 +34,11 @@ interface Props {
   initial?: EffortInput | null;
   /** Reported upward so the figures can travel with a shared link. */
   onChange?: (effort: EffortInput | null) => void;
+  /** The worked-out figures, for the counters above the tabs. */
+  onResult?: (summary: EffortSummary | null) => void;
 }
 
-export function Effort({ graph, plan, initial, onChange }: Props) {
+export function Effort({ graph, plan, initial, onChange, onResult }: Props) {
   const [open, setOpen] = useState(Boolean(initial));
   const [times, setTimes] = useState(initial?.times_per_period ?? 5);
   const [period, setPeriod] = useState<Period>(initial?.period ?? "week");
@@ -73,6 +75,10 @@ export function Effort({ graph, plan, initial, onChange }: Props) {
   useEffect(() => {
     onChange?.(open ? input : null);
   }, [open, input, onChange]);
+
+  useEffect(() => {
+    onResult?.(open ? summary : null);
+  }, [open, summary, onResult]);
 
   if (!open) {
     return (
@@ -174,6 +180,7 @@ export function Effort({ graph, plan, initial, onChange }: Props) {
             size="lg"
             radius="xl"
             color="runs"
+            striped
             aria-label="Share of the time that could run without you"
           />
           <p className="effort__percent">

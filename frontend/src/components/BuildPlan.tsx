@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Badge, Button, Checkbox, Progress, ThemeIcon } from "@mantine/core";
-import { IconChevronDown, IconCircleCheck, IconCircleDot, IconTrophy } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconCircleCheck,
+  IconCircleDot,
+  IconStarFilled,
+  IconTrophy,
+} from "@tabler/icons-react";
 
 import type { Task } from "../types";
 import { TASK_ICON } from "./Icon";
@@ -20,6 +26,17 @@ interface Props {
 }
 
 const PREFIX = "aa-build:";
+
+// A rank for how far along the list is, the way a strategy game marks progress.
+// The last is only ever reached by ticking everything.
+const RANKS: [number, string][] = [
+  [0, "Sketch"],
+  [0.34, "Blueprint"],
+  [0.67, "Nearly built"],
+];
+
+// Pieces in the burst when the last item is ticked.
+const BURST = 14;
 
 // Ticks are a convenience kept in this browser. Storage can be refused or
 // cleared at any time, so a failure means starting with nothing ticked.
@@ -78,12 +95,17 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
   useEffect(() => onLeft?.(tasks.length - finished), [onLeft, tasks.length, finished]);
 
   const share = (finished / Math.max(tasks.length, 1)) * 100;
+  const rank = complete ? "Ready to build" : [...RANKS].reverse().find(([from]) => share / 100 >= from)?.[1];
 
   return (
     <section className="card build" id="build">
       <header className="build__head">
         <h2>Build it</h2>
         <span className="build__count">
+          <span className={`build__rank ${complete ? "build__rank--top" : ""}`}>
+            <IconStarFilled size={12} aria-hidden="true" />
+            {rank}
+          </span>
           {finished} of {tasks.length}
         </span>
       </header>
@@ -93,14 +115,21 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
         size="lg"
         radius="xl"
         color={complete ? "runs" : "forest"}
+        striped={!complete}
+        animated={!complete && finished > 0}
         transitionDuration={300}
         aria-label="Build progress"
       />
 
       {complete && (
         <div className="build__ready" role="status">
-          <ThemeIcon size={40} radius="xl" color="runs">
+          <ThemeIcon className="build__trophy" size={40} radius="xl" color="runs">
             <IconTrophy size={22} />
+            <span className="burst" aria-hidden="true">
+              {Array.from({ length: BURST }, (_, i) => (
+                <i key={i} style={{ "--i": i } as CSSProperties} />
+              ))}
+            </span>
           </ThemeIcon>
           <div>
             <strong>Ready to build</strong>

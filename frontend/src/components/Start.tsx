@@ -27,6 +27,13 @@ const EXAMPLE_ICON: Record<string, TablerIcon> = {
   "payment-no-approval": IconCreditCard,
 };
 
+// A bright tile per example, in turn, so the cards are told apart at a glance.
+const FRUIT = [
+  { from: "orange.5", to: "pink.6", deg: 135 },
+  { from: "grape.5", to: "indigo.6", deg: 135 },
+  { from: "lime.5", to: "teal.6", deg: 135 },
+];
+
 // What using it looks like, in three steps of a few words each.
 const HOW: { icon: TablerIcon; title: string; note: string }[] = [
   { icon: IconPencil, title: "Describe it", note: "In your own words" },
@@ -134,11 +141,11 @@ export function Start(props: Props) {
       {examples.length > 0 && (
         <div className="starters">
           <span className="starters__label">Or try one</span>
-          {examples.map((example) => {
+          {examples.map((example, index) => {
             const Pictured = EXAMPLE_ICON[example.id] ?? IconPencil;
             return (
               <button key={example.id} className="starter" onClick={() => onExample(example)}>
-                <ThemeIcon size={36} radius="md" variant="light">
+                <ThemeIcon size={36} radius="md" variant="gradient" gradient={FRUIT[index % FRUIT.length]}>
                   <Pictured size={20} stroke={1.8} />
                 </ThemeIcon>
                 <span className="starter__text">
@@ -178,7 +185,7 @@ export function Start(props: Props) {
 
         {/* The colours are taught here, once, by showing them on steps drawn
             exactly as the map draws them. */}
-        <div className="preview" aria-label="What the colours mean">
+        <div className="preview board" aria-label="What the colours mean">
           {PREVIEW.map((step) => (
             <figure key={step.label} className="preview__item">
               <NodeCard label={step.label} kind={step.kind} verdict={step.verdict} />

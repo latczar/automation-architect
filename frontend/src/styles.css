@@ -61,6 +61,67 @@
   --tone-bg: var(--unclear-bg);
 }
 
+/* The board: the map is drawn on it, dark in any light, the way a strategy
+   game draws its map. Everything on it reads the same tokens as the rest of the
+   page, so redefining them here is the whole of the dark theme. The verdict
+   colours go brighter, because the light page's shades would sink into it. */
+.board,
+.hud {
+  --surface: #172230;
+  --sunken: #101923;
+  --border: #283849;
+  --border-strong: #3a4e62;
+  --text: #e8eef4;
+  --muted: #95a4b5;
+
+  --auto: #3ddc97;
+  --auto-bg: rgba(61, 220, 151, 0.14);
+  --guard: #ffb547;
+  --guard-bg: rgba(255, 181, 71, 0.15);
+  --human: #8ea2ff;
+  --human-bg: rgba(142, 162, 255, 0.16);
+  --unclear: #a7b1bc;
+  --unclear-bg: rgba(167, 177, 188, 0.14);
+
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 28px -10px rgba(0, 0, 0, 0.75);
+  color: var(--text);
+}
+
+.board {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(61, 220, 151, 0.12), transparent 70%),
+    linear-gradient(180deg, #111b26 0%, #0c141c 100%);
+}
+
+/* A colour for each kind of step, bright as fruit, so a reading step and a
+   writing step are told apart before a word is read. The verdict keeps the
+   border, the bar and the pill; the kind only ever gets this tile. */
+[data-kind="read"] {
+  --fruit: #5b8cff;
+}
+[data-kind="extract"] {
+  --fruit: #ff9f43;
+}
+[data-kind="transform"] {
+  --fruit: #b77bff;
+}
+[data-kind="decision"] {
+  --fruit: #ffd43b;
+}
+[data-kind="write"] {
+  --fruit: #69db7c;
+}
+[data-kind="notify"] {
+  --fruit: #ff6b8b;
+}
+[data-kind="judgement"] {
+  --fruit: #e599f7;
+}
+[data-kind="wait"] {
+  --fruit: #ffc078;
+}
+
 /* Element defaults. In the base layer, so Mantine's components are never
    restyled by them, and every class below still wins. */
 @layer base {
@@ -138,6 +199,26 @@ h4 {
 .mantine-Badge-root {
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* Filled buttons stand on a darker edge of their own colour and press down
+   into it, so the main action on any screen feels like something to press.
+   Mantine leaves the variant off a filled button, so no variant means filled. */
+:is(.mantine-Button-root, .mantine-ActionIcon-root):is(:not([data-variant]), [data-variant="filled"]):not(:disabled):not([data-disabled]) {
+  --fill: var(--button-bg, var(--ai-bg, var(--mantine-primary-color-filled)));
+  --edge: color-mix(in srgb, var(--fill) 58%, #000);
+  box-shadow:
+    0 3px 0 var(--edge),
+    0 8px 16px -8px color-mix(in srgb, var(--fill) 70%, transparent);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    background-color 0.15s ease;
+}
+
+:is(.mantine-Button-root, .mantine-ActionIcon-root):is(:not([data-variant]), [data-variant="filled"]):not(:disabled):not([data-disabled]):active {
+  box-shadow: 0 1px 0 var(--edge);
+  transform: translateY(2px);
 }
 
 /* One surface for every block of the result, so they read as a set. */
@@ -524,6 +605,15 @@ h4 {
     radial-gradient(circle, rgba(18, 24, 38, 0.08) 1px, transparent 1.3px) 0 0 / 22px 22px,
     var(--surface);
   box-shadow: var(--shadow);
+}
+
+.preview.board {
+  border-color: #1d2a37;
+  background:
+    radial-gradient(circle, rgba(148, 163, 184, 0.2) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61, 220, 151, 0.12), transparent 70%),
+    linear-gradient(180deg, #111b26 0%, #0c141c 100%);
+  box-shadow: 0 20px 40px -24px rgba(12, 20, 28, 0.6);
 }
 
 .preview__item {
@@ -1310,6 +1400,124 @@ h4 {
   gap: 8px;
 }
 
+/* The process at a glance, as a strategy game's resource bar: counters on the
+   left, and a row of units on the right, one block per step. */
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 2px 22px 8px;
+  padding: 7px 10px 7px 7px;
+  border: 1px solid #1d2a37;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #172230 0%, #0f1720 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 22px -16px rgba(12, 20, 28, 0.7);
+}
+
+.hud__resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud__resource {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.hud__resource strong {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud__label {
+  color: var(--muted);
+}
+
+.hud__icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--tone);
+  color: #0b1220;
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.hud__resource--build {
+  --tone: #ffd43b;
+}
+
+.hud__resource--time {
+  --tone: #ff9f43;
+}
+
+.hud__squad {
+  display: flex;
+  flex: 1 1 160px;
+  gap: 3px;
+  min-width: 120px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud__squad li {
+  flex: 1 1 0;
+  min-width: 6px;
+  max-width: 34px;
+}
+
+.hud__unit {
+  display: block;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--tone);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  opacity: 0.82;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+/* Guarded steps in caution tape, as on the map. */
+.hud__unit.stat--automatable_with_control {
+  background: repeating-linear-gradient(135deg, var(--guard) 0 4px, #6b4810 4px 8px);
+}
+
+.hud__unit:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.hud__unit--active {
+  opacity: 1;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
 .canvas > .handoff,
 .canvas > .sharebox {
   margin: 4px 22px 10px;
@@ -1539,10 +1747,9 @@ h4 {
   height: max(100%, var(--diagram-fits, 520px));
   min-height: 300px;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid #1d2a37;
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: 0 14px 30px -18px rgba(12, 20, 28, 0.55);
 }
 
 .diagram .react-flow__handle {
@@ -1550,8 +1757,23 @@ h4 {
 }
 
 .diagram .react-flow__edge-path {
-  stroke: #b6bdc8;
-  stroke-width: 1.6;
+  stroke: rgba(164, 180, 198, 0.85);
+  stroke-width: 2;
+}
+
+/* The lines march slowly from one step to the next, like units along a route,
+   which says which way the work goes without an arrowhead. */
+@media (prefers-reduced-motion: no-preference) {
+  .diagram .react-flow__edge-path {
+    stroke-dasharray: 7 5;
+    animation: march 1.6s linear infinite;
+  }
+}
+
+@keyframes march {
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 
 .diagram .react-flow__controls {
@@ -1559,6 +1781,25 @@ h4 {
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow);
+}
+
+.diagram .react-flow__controls-button {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  fill: var(--text);
+}
+
+.diagram .react-flow__controls-button:hover {
+  background: var(--sunken);
+}
+
+.diagram .react-flow__attribution {
+  background: transparent;
+}
+
+.diagram .react-flow__attribution a {
+  color: var(--muted);
 }
 
 /* A branch's condition, placed where the layout left room for it. Absolute,
@@ -1589,10 +1830,11 @@ h4 {
   width: 240px;
   min-height: 100px;
   padding: 11px 12px 10px;
-  border: 1px solid color-mix(in srgb, var(--tone) 26%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--tone) 34%, var(--border));
   border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone-bg) 65%, #fff) 0%, #fff 60%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 13%, var(--surface)) 0%, var(--surface) 62%);
   box-shadow: var(--shadow);
+  color: var(--text);
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
@@ -1607,11 +1849,20 @@ h4 {
   height: 3px;
   border-radius: 0 0 3px 3px;
   background: var(--tone);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 70%, transparent);
+}
+
+/* A step that needs a guard wears caution tape. */
+.node--automatable_with_control::before {
+  height: 5px;
+  background: repeating-linear-gradient(135deg, var(--guard) 0 6px, #2a1e08 6px 11px);
 }
 
 .node:hover {
-  box-shadow: var(--shadow-lift);
-  transform: translateY(-1px);
+  box-shadow:
+    var(--shadow-lift),
+    0 0 22px -8px color-mix(in srgb, var(--tone) 70%, transparent);
+  transform: translateY(-2px);
 }
 
 .node[data-decision="true"] {
@@ -1620,7 +1871,10 @@ h4 {
 
 .node--active {
   border-color: var(--tone);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent), var(--shadow-lift);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--tone) 55%, transparent),
+    0 0 30px -4px color-mix(in srgb, var(--tone) 55%, transparent),
+    var(--shadow-lift);
 }
 
 .node__top {
@@ -1635,8 +1889,11 @@ h4 {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: var(--tone-bg);
-  color: var(--tone);
+  background: var(--fruit, var(--tone));
+  color: #0b1220;
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .node__kind {
@@ -2130,10 +2387,88 @@ h4 {
 }
 
 .build__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* How far along, as a rank that goes up as boxes are ticked. */
+.build__rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  background: #fff3bf;
+  color: #8a5a00;
+  font-size: 0.78rem;
+}
+
+.build__rank--top {
+  background: var(--auto-bg);
+  color: var(--auto);
+}
+
+/* Bright pieces thrown out from the trophy, once, when the last box is ticked. */
+.build__trophy {
+  position: relative;
+  overflow: visible;
+}
+
+.burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+}
+
+.burst i {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--piece);
+  opacity: 0;
+}
+
+.burst i:nth-child(5n + 1) {
+  --piece: #ff6b8b;
+}
+.burst i:nth-child(5n + 2) {
+  --piece: #ffd43b;
+}
+.burst i:nth-child(5n + 3) {
+  --piece: #69db7c;
+}
+.burst i:nth-child(5n + 4) {
+  --piece: #5b8cff;
+}
+.burst i:nth-child(5n + 5) {
+  --piece: #b77bff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .burst i {
+    animation: burst 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    animation-delay: calc(var(--i) * 14ms);
+  }
+}
+
+@keyframes burst {
+  from {
+    opacity: 1;
+    transform: rotate(calc(var(--i) * 25.7deg)) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(calc(var(--i) * 25.7deg + 40deg)) translateY(-58px) scale(0.5);
+  }
 }
 
 .build__meter {
@@ -2509,6 +2844,10 @@ h4 {
 
   .canvas > .handoff,
   .canvas > .sharebox {
+    margin: 4px 16px 8px;
+  }
+
+  .hud {
     margin: 4px 16px 8px;
   }
 

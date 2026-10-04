@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Badge, Button, Kbd, Tabs } from "@mantine/core";
 import {
   IconCircleCheck,
@@ -11,11 +11,12 @@ import {
   type TablerIcon,
 } from "@tabler/icons-react";
 
-import type { AutomationPlan, Blueprint, EffortInput, ProcessGraph } from "../types";
+import type { AutomationPlan, Blueprint, EffortInput, EffortSummary, ProcessGraph } from "../types";
 import { BuildPlan } from "./BuildPlan";
 import { Connections } from "./Connections";
 import { Diagram } from "./Diagram";
 import { Effort } from "./Effort";
+import { Hud } from "./Hud";
 import { Verdicts } from "./Verdicts";
 
 export type Tab = "map" | "connects" | "build" | "time";
@@ -64,6 +65,12 @@ export function Canvas(props: Props) {
 
   // Reported by the checklist as boxes are ticked, so the tab counts down too.
   const [left, setLeft] = useState(() => blueprint?.tasks.filter((t) => t.status !== "done").length ?? 0);
+  // Hours that could run without the person, once the Time tab has them.
+  const [hours, setHours] = useState<number | null>(null);
+  const onResult = useCallback(
+    (summary: EffortSummary | null) => setHours(summary ? summary.hours_that_could_run_without_you : null),
+    [],
+  );
   // The ticks are kept per analysis: the same process mapped the same way.
   const saveAs = `${graph.title}|${graph.steps.map((s) => s.id).join(",")}`;
   const tabs: { id: Tab; label: string; icon: TablerIcon; count?: number }[] = [
@@ -108,6 +115,18 @@ export function Canvas(props: Props) {
           </Button>
         </div>
       </header>
+
+      <Hud
+        graph={graph}
+        plan={plan}
+        left={blueprint ? left : null}
+        hours={hours}
+        selected={props.selected}
+        onPick={(stepId) => {
+          props.onSelect(stepId);
+          onTab("map");
+        }}
+      />
 
       {props.handoff && (
         <p className="handoff">
@@ -221,7 +240,13 @@ export function Canvas(props: Props) {
 
           {plan && (
             <Tabs.Panel value="time" className="tabpanel">
-              <Effort graph={graph} plan={plan} initial={props.effort} onChange={props.onEffort} />
+              <Effort
+                graph={graph}
+                plan={plan}
+                initial={props.effort}
+                onChange={props.onEffort}
+                onResult={onResult}
+              />
             </Tabs.Panel>
           )}
         </div>

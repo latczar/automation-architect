@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import {
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -127,7 +128,7 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
   const fit = useMemo(() => ({ padding: MARGIN / fits, maxZoom: MAX_ZOOM }), [fits]);
 
   return (
-    <div className="diagram" style={{ "--diagram-fits": `${fits}px` } as CSSProperties}>
+    <div className="diagram board" style={{ "--diagram-fits": `${fits}px` } as CSSProperties}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -149,7 +150,16 @@ function Canvas({ graph, plan, selected, onSelect }: Props) {
         preventScrolling={false}
         zoomActivationKeyCode="Control"
       >
-        <Background gap={22} size={1.2} color="#cfd4dc" />
+        {/* Fine dots, and a coarser grid over them, the way a strategy game's
+            map is squared off. Faint, because the steps are what matter. */}
+        <Background id="dots" gap={22} size={1.2} color="rgba(148, 163, 184, 0.2)" />
+        <Background
+          id="grid"
+          variant={BackgroundVariant.Lines}
+          gap={132}
+          lineWidth={1}
+          color="rgba(61, 220, 151, 0.07)"
+        />
         <Controls showInteractive={false} />
         <RefitOnResize fit={fit} />
       </ReactFlow>

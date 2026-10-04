@@ -29,6 +29,7 @@ export function NodeCard({ label, kind, verdict, hasControl = false, selected = 
     <div
       className={`node node--${judged} ${selected ? "node--active" : ""}`}
       data-decision={kind === "decision"}
+      data-kind={kind}
     >
       <div className="node__top">
         <span className="node__kind-icon">
