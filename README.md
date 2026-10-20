@@ -1,39 +1,38 @@
 # Automation Architect
 
-**Work out what is safe to automate before anybody builds it.**
+**Describe a job you do by hand and see which steps are safe to automate, before anyone builds it.**
 
-**[Try it](https://ai-auto-architect.vercel.app).** Two worked examples, no sign-up, no API key.
+<p align="center">Python, FastAPI, React, Gemini · prototype · MIT · <a href="#run-it-locally">Run it locally</a></p>
 
-Describe a job you do by hand. It maps the steps, judges which ones a computer could
-take over, and refuses to call a step safe if it moves money, cannot be undone, or
-carries legal weight. That refusal lives in code, not in the prompt, and a scored eval
-suite checks that it holds.
+<p align="center">
+  <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-blue"></a>
+  <a href="https://ai-auto-architect.vercel.app"><img alt="Live demo" src="https://img.shields.io/badge/live%20demo-ai--auto--architect.vercel.app-2f6f5e"></a>
+</p>
 
-![The workbench: a supplier payment process mapped step by step, with the payment and the deletion held back as needing a guard](docs/screenshot.png)
+<p align="center">
+  <img src="docs/screenshots/01-start.png" width="24%" alt="Start page: a box to describe the job, and two recorded examples to try">
+  <img src="docs/screenshots/02-map.png" width="24%" alt="A supplier payment process mapped step by step, with the payment and the deletion held back as needing a guard">
+  <img src="docs/screenshots/03-connections.png" width="24%" alt="How it connects: the schedule that starts it, the n8n workflow and the systems it touches">
+  <img src="docs/screenshots/04-build-it.png" width="24%" alt="Build it: a checklist of what the export already did and what is left to decide">
+</p>
 
-## The one rule
+## Why it exists
 
-**The model understands. The code checks.**
+Ask a chatbot to design an automation and it will happily design one that pays a supplier and then deletes the evidence. Here the model understands the process, but the code makes the final call. A step that moves money, cannot be undone or carries legal weight can never come back marked safe to run unattended, and a scored eval suite checks that this holds.
 
-Ask a chatbot to design an automation and it will happily design one that pays a
-supplier and deletes the evidence afterwards. Here the model's verdict is an input,
-not the decision. A step that moves money, cannot be undone or carries legal weight
-can never come back marked safe to run unattended. See `NEVER_FULLY_AUTOMATIC` and
-`mandatory_risks` in [`assessment.py`](backend/app/schemas/assessment.py).
+## What it does
 
-The same split runs through the rest. Time figures come from you, not the model. The
-n8n export only uses a real node where you named the system.
+- **Maps the process.** You describe the job in plain English; the model fills in a structured form, and the code validates the graph and asks again with the faults if it is broken.
+- **Judges each step, then checks the judgement.** The code adds risks the model missed, downgrades verdicts, adds guards and records every change it made. See `NEVER_FULLY_AUTOMATIC` and `mandatory_risks` in [`assessment.py`](backend/app/schemas/assessment.py), and `_normalise` in [`assess.py`](backend/app/assess.py).
+- **Finds the article for the job.** Twelve written articles about common processes; the closest one is shown beside yours, and nothing is shown when none is close enough.
+- **Works out the time saved from your numbers.** How often and how long per step come from you. It will not guess them.
+- **Hands over to n8n.** A first-draft workflow on your clipboard, with real IF, Switch and Wait nodes. A system you named becomes its real n8n node; what only you know is left empty and each node's note says so. A connections map and a build checklist come from the same functions as the export.
+- **Shares a link and keeps your draft.** Share links use an unguessable id and expire after 30 days. Your draft stays in your own browser for 7 days.
 
-## What it catches
-
-A payment process with no approval step anywhere in it (trimmed):
+Here is the code overruling the model on a recorded payment process with no approval step (trimmed):
 
 ```
 $ python scripts/analyse.py --replay payment-no-approval
-
-[ guard ]  pay_invoice
-            risks: moves_money, irreversible
-            ! we changed this: no guard -> human_approval
 
 [ guard ]  delete_email
             risks: irreversible
@@ -44,201 +43,102 @@ $ python scripts/analyse.py --replay payment-no-approval
 Runs on its own: 4   Needs a guard: 2   Stays with you: 0   Unclear: 0
 ```
 
-Every `!` line is the code overruling the model. On the payment, the model spotted the
-risk but forgot to attach the guard it called for. On deleting the email it was wrong
-three times over, and each rule caught what the one before let through. The rules are
-`_normalise` in [`assess.py`](backend/app/assess.py), and only code writes the record
-of what changed.
+## How it fits together
 
-## How it works
-
-```
-                          Plain English
-                               |
-            +------------------+------------------+
-            |                                     |
-            v                                     v
-   THE SLOW PATH                          THE FAST PATH
-   two model calls, 10 to 20s             one embedding, about 1s
-
- [ CODE  ] is this a description?       [ CODE  ] vector for the text
-     |     no -> say so, stop                |
-     v                                       v
- [ MODEL ] fills in a structured form    [ CODE  ] compare with 12 articles
-     |                                       |
-     v                                       v
- [ CODE  ] validates the graph           [ CODE  ] above the threshold?
-     |                                       |     no -> show nothing
-     +-- broken? hand back the faults        v
-     |   and ask again                   The article for this job
-     v
- [ MODEL ] judges each step
-     |
-     v
- [ CODE  ] adds missed risks, downgrades,
-     |     adds guards, records each change
-     v
- Process map + verdicts + controls
+```mermaid
+flowchart LR
+  UI["React page<br/>(frontend/)"] -->|/api/analyse| API["FastAPI<br/>(backend/app/api.py)"]
+  UI -->|/api/playbook| API
+  API --> Extract["extract.py<br/>model fills the form"]
+  API --> Assess["assess.py<br/>model judges, code checks"]
+  Extract --> Gemini[("Gemini<br/>or recorded replies")]
+  Assess --> Gemini
+  API --> Playbooks["playbooks.py<br/>embeddings or BM25"]
+  API --> Export["export_n8n.py<br/>blueprint.py"]
+  API --> Share[("Shares<br/>SQLite locally,<br/>Vercel Blob deployed")]
 ```
 
-Every CODE box is a decision the model does not get to make. The two paths are
-separate requests, so the article still arrives when the model is slow or down.
+The page makes two separate requests. The slow one makes two model calls (about 10 to 20 seconds) to map and judge the process. The fast one compares a single embedding with the twelve articles (about 1 second), so the article still arrives when the model is slow or down. Without an API key or network, retrieval falls back to BM25; there is no vector database, just a 160KB file and a loop.
 
-## What else it does
+## Run it locally
 
-- **Finds the article for the job.** Twelve written articles; the closest is shown
-  beside your process, and it usually mentions the step you forgot. The whole library
-  is listed under the box, so when nothing matches the page can say so plainly.
-- **Takes answers to its own questions.** Answer one and the process is mapped again,
-  with your answer treated as fact.
-- **Does the time arithmetic with your numbers.** How often, how long per step. It
-  will not guess them for you.
-- **Shares a link.** Unguessable id, expires after 30 days.
-- **Hands over to n8n.** A first-draft workflow on your clipboard, laid out left to
-  right, with real IF, Switch and Wait nodes. A system you named becomes its real node, set to
-  what the step does and filled in from the process: each field is read from the step
-  that produced it. What only you know, such as which spreadsheet, is left empty, and
-  each node's note says so. Every setting was checked against n8n's own validation.
-- **Shows how it connects, and what is left to build.** A map from the trigger through
-  the workflow to each system and back to you, and a checklist that separates what the
-  export already did from what you still have to do or decide. Both come from the same
-  functions as the export, and a test holds them to it.
-- **Keeps your draft.** In your own browser only, for 7 days.
+1. **Prerequisites.** Python 3.11 or newer, and Node.js 18 or newer for the page (Vite 6 needs it). A free [Google AI Studio](https://aistudio.google.com) key is optional: the two recorded examples need no key.
+2. **Install the backend.**
+   ```bash
+   cd backend
+   python -m venv .venv
+   .venv/Scripts/python -m pip install -r requirements.txt
+   ```
+3. **Try it from the command line**, with no key:
+   ```bash
+   .venv/Scripts/python scripts/analyse.py --replay payment-no-approval
+   ```
+   With a key, on your own words: set `GEMINI_API_KEY` in your environment (there is no `.env` file), then run `.venv/Scripts/python scripts/analyse.py "describe something repetitive you do"`.
+4. **Run the web version** in two terminals:
+   ```bash
+   cd backend
+   .venv/Scripts/python -m uvicorn app.api:app --port 8000
+   ```
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+5. **Open** http://localhost:5173 and pick one of the two examples marked Instant.
 
-## Retrieval, measured
-
-Two retrievers, scored on the same 22 labelled queries. Eight of them must return
-nothing.
-
-| retriever  | right (of 14) | stayed quiet (of 8) | total |
-| ---------- | ------------- | ------------------- | ----- |
-| bm25       | 10            | 8                   | 18    |
-| embeddings | 13            | 8                   | 21    |
-
-Embeddings are used, with BM25 as the fallback when there is no key or network. Both
-thresholds were swept, and each sits where it never shows an irrelevant article rather
-than where it scores highest. There is no vector database: 12 articles at 768
-dimensions is a 160KB file and a loop.
-
-## Tests and evals
+**Tests.** From `backend/`. Only `live` calls the model:
 
 ```bash
-cd backend
-.venv/Scripts/python -m pytest                   # 340 tests, no API calls
-.venv/Scripts/python scripts/eval.py             # the safety net, free and instant
+.venv/Scripts/python -m pytest                   # 382 tests
+.venv/Scripts/python scripts/eval.py             # the safety rules
 .venv/Scripts/python scripts/eval.py replay      # the pipeline, recorded answers
-.venv/Scripts/python scripts/eval.py playbooks   # retrieval, free and instant
-.venv/Scripts/python scripts/eval.py live        # the pipeline, real model
+.venv/Scripts/python scripts/eval.py playbooks   # retrieval
+.venv/Scripts/python scripts/eval.py live        # the pipeline, real model (needs a key)
 ```
 
-Checks assert properties, not exact wording: "the step that deletes something did not
-come back safe", however the model phrased it. Nearly half the cases are harmless
-steps that must stay quiet, because a detector that flags everything is worthless.
-Known gaps stay in the suite and are reported, rather than deleted. It exits non-zero
-on a regression, so it can run in a build.
+The evals check properties, not wording: "the step that deletes something did not come back safe". Nearly half the cases are harmless steps that must stay quiet. The runner exits non-zero on a regression.
 
-Building it found two real holes: a risk on the never-safe list with no code behind
-it, and three money phrases nothing matched.
+### Deploying
 
-## Choosing the model
+One Vercel project serves the API (through `index.py`) and the built page together: `vercel` to link, then `vercel --prod`. Sharing needs Vercel Blob storage, which sets `BLOB_READ_WRITE_TOKEN`; without it, everything else still works. `GEMINI_API_KEY` is optional: without it the recorded examples work and typed descriptions get a plain message. Every model call, repair and retry in one request shares a 100 second deadline, inside the 120 seconds the platform allows.
 
-The same five live cases on each model, on the evening of 24 September 2026. Cost is
-at the paid rate on Google's pricing page that day; the free tier costs nothing until
-its daily allowance runs out.
+## Where things are
 
-| model | checks passed | could not run | time per analysis | calls | thinking tokens | cost per 1,000 analyses |
-| --- | --- | --- | --- | --- | --- | --- |
-| gemini-3.5-flash-lite | 24 of 26 | 0 | 14.8s | 2 | 0 | $4.66 |
-| gemini-3.1-flash-lite | 19 of 21 | 1 | 24.0s | 2 | 0 | $2.72 |
-| gemini-3.8-flash | none ran | 2 | n/a | n/a | n/a | n/a |
+| Folder | What lives there |
+| --- | --- |
+| `backend/app` | The FastAPI app, the pipeline (extract, assess), the safety rules, retrieval, the n8n export and sharing |
+| `backend/playbooks` | The twelve articles and their embedding vectors |
+| `backend/recordings` | Saved model replies for the two examples, so they run with no key |
+| `backend/evals` | Eval cases, checks, baselines and the model bake-off results |
+| `backend/scripts` | Command-line tools: analyse, eval, bakeoff, embed the playbooks |
+| `backend/tests` | The pytest suite |
+| `frontend/src` | The React page (Vite, Mantine, React Flow) |
+| `docs` | Screenshots |
 
-- **Flash-Lite 3.5 stays.** It is the only model that finished every case, and the
-  quickest.
-- **Flash-Lite 3.1** is cheaper but slower, and one analysis ran past the 100 second
-  limit.
-- **Flash 3.8 thinks before it answers.** On the one call it finished, 2,446 thinking
-  tokens against 1,626 of answer. Its first analysis ran out of time and its free
-  allowance ran out during the second.
-- **Not measured:** Flash 3.5, whose free allowance of 20 requests a day was already
-  used, and Flash-Lite 2.5, which is closed to new users.
+## Status and limits
 
-```bash
-.venv/Scripts/python scripts/bakeoff.py --ipv4 gemini-3.5-flash   # after the daily reset
-.venv/Scripts/python scripts/bakeoff.py --table
-```
+A working prototype with a public demo. The pipeline, the page, retrieval, answerable questions, time figures, sharing, the n8n export and the eval suite all work.
 
-The live baseline records which model produced it, so a later run on a different
-model says so rather than reporting a regression in the code.
+- **The model is Gemini 3.5 Flash-Lite.** On five live cases (24 September 2026) it passed 24 of 26 checks at 14.8 seconds per analysis, and was the only model tried that finished every case. Results are in `backend/evals/bakeoff`.
+- **Retrieval was scored** on 22 labelled queries, 8 of which must return nothing: embeddings got 21 right, BM25 got 18. Both thresholds favour showing nothing over showing an irrelevant article.
+- **The n8n export is a first draft.** You still choose how to reach each system and fill in what only you know; the Build it checklist lists what is left.
+- **Known eval gaps stay in the suite** and are reported rather than deleted.
+- **Your data:** drafts stay in your browser for 7 days, share links are stored for 30 days, nothing else you type is kept, and there are no accounts. If a model key is set on a deployment, anyone using the page spends that quota, within a daily budget (`backend/app/limits.py`).
 
-## Run it
+## How this was built
 
-The two recorded cases need no key:
+Written with AI assistance (Anthropic's Claude), directed and tested by Lattrell Caesar.
 
-```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python scripts/analyse.py --replay payment-no-approval
-```
+## More from latczar
 
-With a free [Google AI Studio](https://aistudio.google.com) key, on your own words:
-
-```bash
-setx GEMINI_API_KEY "your-key"
-# open a new terminal, then:
-.venv/Scripts/python scripts/analyse.py "describe something repetitive you do"
-```
-
-The web version, in two terminals:
-
-```bash
-cd backend
-.venv/Scripts/python -m uvicorn app.api:app --port 8000
-```
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173.
-
-## Deploying it
-
-One Vercel project serves the API and the built page together.
-
-```bash
-npm i -g vercel
-vercel          # first run creates and links the project
-vercel --prod   # the public URL
-```
-
-- **Shares need blob storage.** Add it under Storage in the Vercel dashboard, which
-  sets `BLOB_READ_WRITE_TOKEN`. Without it, everything except sharing still works.
-- **A model key is optional.** Without `GEMINI_API_KEY` the recorded examples still
-  work and typed descriptions get a plain message. With one, anybody using the page
-  spends your quota.
-- **One deadline per request.** Every model call, repair and retry shares 100
-  seconds, inside the 120 the platform allows, so a slow reply ends in a plain
-  message rather than a 504.
-
-## Where your data goes
-
-| what                    | where                        | how long |
-| ----------------------- | ---------------------------- | -------- |
-| your draft              | your own browser             | 7 days   |
-| a share link            | Vercel Blob, unguessable id  | 30 days  |
-| anything else you type  | not kept; no accounts        | not kept |
-
-## Status
-
-Working: the full pipeline, the web page, retrieval, answerable questions, time
-figures, sharing, the n8n handover and the eval suite.
-
-The model is Gemini Flash-Lite. Measured on the real workload, a full analysis takes
-about 20 seconds. Flash was slower on the same work, and its free tier allows only 20
-requests a day.
+| Project | What it is |
+| --- | --- |
+| [agentic-qa-tcm](https://github.com/latczar/agentic-qa-tcm) | AI-written Playwright tests, checked by real gates and human review. |
+| [agentic-qa-sd](https://github.com/latczar/agentic-qa-sd) | Local AI service desk with a human approval gate. |
+| [doctor-outreach-demo](https://github.com/latczar/doctor-outreach-demo) | Doctor outreach pipeline with AI drafts and human approval. |
+| [dturbanada-booking](https://github.com/latczar/dturbanada-booking) | Coach seat booking, QR tickets and staff tools for a Philippine operator. |
+| [mintern](https://github.com/latczar/mintern) | AI marketing strategist that drafts posts and waits for your yes. |
+| [remote-jobs-mvp](https://github.com/latczar/remote-jobs-mvp) | Remote job board showing which countries can apply, with proof. |
 
 ## Licence
 
