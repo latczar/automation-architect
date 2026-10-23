@@ -13,18 +13,18 @@
   --accent-bg: #ecf5f1;
   --accent-bright: #3f8a6c;
 
-  --auto: #08805e;
-  --auto-bg: #e6f7f0;
+  --auto: #2f5d50;
+  --auto-bg: #ecf5f1;
   --guard: #9a5b00;
   --guard-bg: #fff4d9;
-  --human: #3b5bdb;
-  --human-bg: #edf2ff;
+  --human: #566174;
+  --human-bg: #f1f3f6;
   --unclear: #5c636b;
   --unclear-bg: #f1f3f5;
 
-  --radius: 14px;
+  --radius: 10px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
-  --shadow-lift: 0 2px 4px rgba(16, 24, 40, 0.06), 0 12px 24px -6px rgba(16, 24, 40, 0.14);
+  --shadow-lift: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px -4px rgba(16, 24, 40, 0.12);
 }
 
 /* Anything drawn in a verdict's colour reads it from --tone, so each verdict is
@@ -61,65 +61,12 @@
   --tone-bg: var(--unclear-bg);
 }
 
-/* The board: the map is drawn on it, dark in any light, the way a strategy
-   game draws its map. Everything on it reads the same tokens as the rest of the
-   page, so redefining them here is the whole of the dark theme. The verdict
-   colours go brighter, because the light page's shades would sink into it. */
-.board,
-.hud {
-  --surface: #172230;
-  --sunken: #101923;
-  --border: #283849;
-  --border-strong: #3a4e62;
-  --text: #e8eef4;
-  --muted: #95a4b5;
-
-  --auto: #3ddc97;
-  --auto-bg: rgba(61, 220, 151, 0.14);
-  --guard: #ffb547;
-  --guard-bg: rgba(255, 181, 71, 0.15);
-  --human: #8ea2ff;
-  --human-bg: rgba(142, 162, 255, 0.16);
-  --unclear: #a7b1bc;
-  --unclear-bg: rgba(167, 177, 188, 0.14);
-
-  --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
-  --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 28px -10px rgba(0, 0, 0, 0.75);
-  color: var(--text);
-}
-
+/* The board the map is drawn on: the same light surfaces as the rest of the
+   page, with a faint dot grid so it still reads as a canvas. */
 .board {
   background:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(61, 220, 151, 0.12), transparent 70%),
-    linear-gradient(180deg, #111b26 0%, #0c141c 100%);
-}
-
-/* A colour for each kind of step, bright as fruit, so a reading step and a
-   writing step are told apart before a word is read. The verdict keeps the
-   border, the bar and the pill; the kind only ever gets this tile. */
-[data-kind="read"] {
-  --fruit: #5b8cff;
-}
-[data-kind="extract"] {
-  --fruit: #ff9f43;
-}
-[data-kind="transform"] {
-  --fruit: #b77bff;
-}
-[data-kind="decision"] {
-  --fruit: #ffd43b;
-}
-[data-kind="write"] {
-  --fruit: #69db7c;
-}
-[data-kind="notify"] {
-  --fruit: #ff6b8b;
-}
-[data-kind="judgement"] {
-  --fruit: #e599f7;
-}
-[data-kind="wait"] {
-  --fruit: #ffc078;
+    radial-gradient(circle, rgba(18, 24, 38, 0.08) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    var(--sunken);
 }
 
 /* Element defaults. In the base layer, so Mantine's components are never
@@ -304,7 +251,7 @@ h4 {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+  background: var(--accent);
   color: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -348,7 +295,7 @@ h4 {
   padding: clamp(20px, 7vh, 80px) 16px 72px;
 }
 
-/* A soft green glow over a dot grid, the same dots the map is drawn on, fading
+/* A dot grid, the same dots the map is drawn on, fading
    out towards the edges so it frames the question without boxing it in. */
 .start::before {
   content: "";
@@ -360,7 +307,6 @@ h4 {
   height: 720px;
   transform: translateX(-50%);
   background:
-    radial-gradient(closest-side, rgba(63, 138, 108, 0.18), transparent) 50% 32% / 980px 560px no-repeat,
     radial-gradient(circle, rgba(18, 24, 38, 0.09) 1px, transparent 1.3px) 0 0 / 22px 22px;
   -webkit-mask-image: radial-gradient(ellipse 58% 62% at 50% 38%, #000 35%, transparent 100%);
   mask-image: radial-gradient(ellipse 58% 62% at 50% 38%, #000 35%, transparent 100%);
@@ -400,7 +346,7 @@ h4 {
 }
 
 .start__accent {
-  background: linear-gradient(95deg, var(--accent) 10%, var(--accent-bright) 55%, #0ca678 100%);
+  background: var(--accent);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -608,12 +554,9 @@ h4 {
 }
 
 .preview.board {
-  border-color: #1d2a37;
   background:
-    radial-gradient(circle, rgba(148, 163, 184, 0.2) 1px, transparent 1.3px) 0 0 / 22px 22px,
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61, 220, 151, 0.12), transparent 70%),
-    linear-gradient(180deg, #111b26 0%, #0c141c 100%);
-  box-shadow: 0 20px 40px -24px rgba(12, 20, 28, 0.6);
+    radial-gradient(circle, rgba(18, 24, 38, 0.08) 1px, transparent 1.3px) 0 0 / 22px 22px,
+    var(--sunken);
 }
 
 .preview__item {
@@ -746,7 +689,7 @@ h4 {
   max-width: 88%;
   padding: 11px 15px;
   border-radius: 18px 18px 6px 18px;
-  background: linear-gradient(135deg, var(--accent) 0%, #3a7362 100%);
+  background: var(--accent);
   color: #fff;
   font-size: 0.9rem;
   line-height: 1.5;
@@ -824,7 +767,7 @@ h4 {
   width: 20px;
   height: 20px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+  background: var(--accent);
   color: #fff;
 }
 
@@ -913,7 +856,7 @@ h4 {
   width: 35%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  background: var(--accent);
   animation: working-slide 1.4s ease-in-out infinite;
 }
 
@@ -1409,12 +1352,9 @@ h4 {
   gap: 10px 16px;
   margin: 2px 22px 8px;
   padding: 7px 10px 7px 7px;
-  border: 1px solid #1d2a37;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #172230 0%, #0f1720 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 10px 22px -16px rgba(12, 20, 28, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
 .hud__resources {
@@ -1431,9 +1371,6 @@ h4 {
   align-items: center;
   gap: 6px;
   padding: 3px 10px 3px 3px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
   font-size: 0.8rem;
   white-space: nowrap;
 }
@@ -1451,22 +1388,7 @@ h4 {
 .hud__icon {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--tone);
-  color: #0b1220;
-  box-shadow:
-    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.hud__resource--build {
-  --tone: #ffd43b;
-}
-
-.hud__resource--time {
-  --tone: #ff9f43;
+  color: var(--tone, var(--muted));
 }
 
 .hud__squad {
@@ -1488,33 +1410,24 @@ h4 {
 .hud__unit {
   display: block;
   width: 100%;
-  height: 18px;
+  height: 8px;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  border-radius: 2px;
   background: var(--tone);
-  box-shadow:
-    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  opacity: 0.82;
+  opacity: 0.7;
   transition:
     transform 0.12s ease,
     opacity 0.12s ease;
 }
 
-/* Guarded steps in caution tape, as on the map. */
-.hud__unit.stat--automatable_with_control {
-  background: repeating-linear-gradient(135deg, var(--guard) 0 4px, #6b4810 4px 8px);
-}
-
 .hud__unit:hover {
   opacity: 1;
-  transform: translateY(-2px);
 }
 
 .hud__unit--active {
   opacity: 1;
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
@@ -1830,39 +1743,18 @@ h4 {
   width: 240px;
   min-height: 100px;
   padding: 11px 12px 10px;
-  border: 1px solid color-mix(in srgb, var(--tone) 34%, var(--border));
-  border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 13%, var(--surface)) 0%, var(--surface) 62%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--tone);
+  border-radius: 8px;
+  background: var(--surface);
   box-shadow: var(--shadow);
   color: var(--text);
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 
-/* A bar of the verdict's colour along the top, readable at any zoom. */
-.node::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  right: 14px;
-  left: 14px;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: var(--tone);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 70%, transparent);
-}
-
-/* A step that needs a guard wears caution tape. */
-.node--automatable_with_control::before {
-  height: 5px;
-  background: repeating-linear-gradient(135deg, var(--guard) 0 6px, #2a1e08 6px 11px);
-}
-
 .node:hover {
-  box-shadow:
-    var(--shadow-lift),
-    0 0 22px -8px color-mix(in srgb, var(--tone) 70%, transparent);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
 }
 
 .node[data-decision="true"] {
@@ -1872,8 +1764,7 @@ h4 {
 .node--active {
   border-color: var(--tone);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--tone) 55%, transparent),
-    0 0 30px -4px color-mix(in srgb, var(--tone) 55%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--tone) 35%, transparent),
     var(--shadow-lift);
 }
 
@@ -1888,12 +1779,9 @@ h4 {
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  background: var(--fruit, var(--tone));
-  color: #0b1220;
-  box-shadow:
-    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-radius: 5px;
+  background: var(--sunken);
+  color: var(--muted);
 }
 
 .node__kind {
@@ -2181,7 +2069,7 @@ h4 {
 
 .map__card--hub {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  background: linear-gradient(180deg, var(--accent-bg) 0%, var(--surface) 70%);
+  background: var(--surface);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 7%, transparent), var(--shadow);
 }
 
@@ -2226,7 +2114,20 @@ h4 {
 .map__counts {
   display: flex;
   flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.map__counts span {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+}
+
+.map__counts svg {
+  color: var(--tone);
 }
 
 .map__quiet {

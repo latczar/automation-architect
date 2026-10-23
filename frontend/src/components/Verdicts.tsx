@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Badge, ThemeIcon } from "@mantine/core";
-import { IconChevronRight, IconHandClick, IconTrophy } from "@tabler/icons-react";
+import { IconChevronRight, IconHandClick, IconShieldCheck } from "@tabler/icons-react";
 
 import { plainly, VERDICT_COLOR, VERDICT_LABEL as LABEL, VERDICT_ORDER as ORDER } from "../labels";
 import type { AutomationPlan, Override, ProcessGraph, StepAssessment } from "../types";
@@ -66,7 +66,7 @@ export function Verdicts({ graph, plan, selected, onSelect }: Props) {
               size="sm"
               variant="light"
               color="guard"
-              leftSection={<IconTrophy size={12} />}
+              leftSection={<IconShieldCheck size={12} />}
               title="The code overruled the model here"
             >
               {caught}

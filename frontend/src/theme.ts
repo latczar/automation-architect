@@ -18,19 +18,10 @@ const forest: MantineColorsTuple = [
 ];
 
 // One colour per verdict, and the same one wherever that verdict appears:
-// the key, the map, the list, the checklist.
-const runs: MantineColorsTuple = [
-  "#e6fcf5",
-  "#c3fae8",
-  "#96f2d7",
-  "#63e6be",
-  "#38d9a9",
-  "#20c997",
-  "#12b886",
-  "#0ca678",
-  "#08805e",
-  "#066649",
-];
+// the key, the map, the list, the checklist. Automated steps share the brand
+// green, steps needing approval get the one warning colour, and the rest stay
+// neutral, so the page has a single accent.
+const runs = forest;
 
 const guard: MantineColorsTuple = [
   "#fff8e1",
@@ -46,16 +37,16 @@ const guard: MantineColorsTuple = [
 ];
 
 const human: MantineColorsTuple = [
-  "#edf2ff",
-  "#dbe4ff",
-  "#bac8ff",
-  "#91a7ff",
-  "#748ffc",
-  "#5c7cfa",
-  "#4c6ef5",
-  "#4263eb",
-  "#3b5bdb",
-  "#364fc7",
+  "#f1f3f6",
+  "#e3e7ed",
+  "#c9d0da",
+  "#aab4c2",
+  "#8e99a9",
+  "#7a8596",
+  "#677285",
+  "#566174",
+  "#475164",
+  "#383f4e",
 ];
 
 const SANS = '"Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -70,6 +61,7 @@ export const theme = createTheme({
   defaultRadius: "md",
   cursorType: "pointer",
   components: {
+    Badge: { defaultProps: { radius: "sm" }, styles: { root: { textTransform: "none", fontWeight: 500 } } },
     Tooltip: { defaultProps: { withArrow: true, openDelay: 250, multiline: true, maw: 260 } },
   },
 });

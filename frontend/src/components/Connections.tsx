@@ -193,7 +193,7 @@ export function Connections({ blueprint }: { blueprint: Blueprint }) {
 
         <article className="map__card map__card--narrow map__card--hub">
           <header className="map__head">
-            <ThemeIcon size={40} radius="md" variant="gradient" gradient={{ from: "forest.7", to: "runs.7", deg: 135 }}>
+            <ThemeIcon size={40} radius="md" variant="light" color="forest">
               <Mark size={22} stroke={1.8} />
             </ThemeIcon>
             <div>
@@ -201,17 +201,17 @@ export function Connections({ blueprint }: { blueprint: Blueprint }) {
               <span className="map__role">The automation</span>
             </div>
           </header>
-          <div className="map__counts">
-            <Badge size="lg" variant="light" color="runs" leftSection={<Runs size={14} />}>
-              {runs} on {runs === 1 ? "its" : "their"} own
-            </Badge>
-            <Badge size="lg" variant="light" color="guard" leftSection={<Waits size={14} />}>
-              {waits} {waits === 1 ? "waits" : "wait"} for a yes
-            </Badge>
-            <Badge size="lg" variant="light" color="human" leftSection={<Yours size={14} />}>
-              {yours} with you
-            </Badge>
-          </div>
+          <p className="map__counts">
+            <span className="stat--fully_automatable">
+              <Runs size={14} aria-hidden="true" /> {runs} automated
+            </span>
+            <span className="stat--automatable_with_control">
+              <Waits size={14} aria-hidden="true" /> {waits} {waits === 1 ? "needs" : "need"} approval
+            </span>
+            <span className="stat--human_required">
+              <Yours size={14} aria-hidden="true" /> {yours} manual
+            </span>
+          </p>
           {automated.length > 0 && (
             <>
               <p className="map__sub">Done inside the workflow</p>

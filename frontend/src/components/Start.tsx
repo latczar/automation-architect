@@ -2,7 +2,6 @@ import { useRef } from "react";
 import { ActionIcon, Badge, ThemeIcon } from "@mantine/core";
 import {
   IconArrowUp,
-  IconBolt,
   IconBook2,
   IconCreditCard,
   IconFileInvoice,
@@ -28,12 +27,6 @@ const EXAMPLE_ICON: Record<string, TablerIcon> = {
 };
 
 // A bright tile per example, in turn, so the cards are told apart at a glance.
-const FRUIT = [
-  { from: "orange.5", to: "pink.6", deg: 135 },
-  { from: "grape.5", to: "indigo.6", deg: 135 },
-  { from: "lime.5", to: "teal.6", deg: 135 },
-];
-
 // What using it looks like, in three steps of a few words each.
 const HOW: { icon: TablerIcon; title: string; note: string }[] = [
   { icon: IconPencil, title: "Describe it", note: "In your own words" },
@@ -141,11 +134,11 @@ export function Start(props: Props) {
       {examples.length > 0 && (
         <div className="starters">
           <span className="starters__label">Or try one</span>
-          {examples.map((example, index) => {
+          {examples.map((example) => {
             const Pictured = EXAMPLE_ICON[example.id] ?? IconPencil;
             return (
               <button key={example.id} className="starter" onClick={() => onExample(example)}>
-                <ThemeIcon size={36} radius="md" variant="gradient" gradient={FRUIT[index % FRUIT.length]}>
+                <ThemeIcon size={36} radius="md" variant="light" color="forest">
                   <Pictured size={20} stroke={1.8} />
                 </ThemeIcon>
                 <span className="starter__text">
@@ -156,9 +149,7 @@ export function Start(props: Props) {
                   <Badge
                     className="starter__tag"
                     size="sm"
-                    variant="light"
-                    color="runs"
-                    leftSection={<IconBolt size={11} />}
+                    variant="default"
                   >
                     Instant
                   </Badge>

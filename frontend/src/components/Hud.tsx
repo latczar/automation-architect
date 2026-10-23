@@ -23,9 +23,9 @@ interface Props {
 }
 
 const RESOURCES: { verdict: Verdict; icon: TablerIcon; label: string }[] = [
-  { verdict: "fully_automatable", icon: IconBolt, label: "hands-off" },
-  { verdict: "automatable_with_control", icon: IconShieldCheck, label: "guarded" },
-  { verdict: "human_required", icon: IconUser, label: "with you" },
+  { verdict: "fully_automatable", icon: IconBolt, label: "automated" },
+  { verdict: "automatable_with_control", icon: IconShieldCheck, label: "need approval" },
+  { verdict: "human_required", icon: IconUser, label: "manual" },
   { verdict: "needs_more_info", icon: IconHelpCircle, label: "unclear" },
 ];
 
@@ -69,7 +69,7 @@ export function Hud({ graph, plan, left, hours, selected, onPick }: Props) {
               <IconListCheck size={14} stroke={2.4} aria-hidden="true" />
             </span>
             <strong>{left}</strong>
-            <span className="hud__label">to build</span>
+            <span className="hud__label">tasks to build</span>
           </li>
         )}
         {hours !== null && hours > 0 && (
@@ -78,7 +78,7 @@ export function Hud({ graph, plan, left, hours, selected, onPick }: Props) {
               <IconClock size={14} stroke={2.4} aria-hidden="true" />
             </span>
             <strong>{short(hours)}</strong>
-            <span className="hud__label">back a month</span>
+            <span className="hud__label">saved a month</span>
           </li>
         )}
       </ul>

@@ -4,7 +4,6 @@ import {
   IconChevronDown,
   IconCircleCheck,
   IconCircleDot,
-  IconStarFilled,
   IconTrophy,
 } from "@tabler/icons-react";
 
@@ -26,14 +25,6 @@ interface Props {
 }
 
 const PREFIX = "aa-build:";
-
-// A rank for how far along the list is, the way a strategy game marks progress.
-// The last is only ever reached by ticking everything.
-const RANKS: [number, string][] = [
-  [0, "Sketch"],
-  [0.34, "Blueprint"],
-  [0.67, "Nearly built"],
-];
 
 // Pieces in the burst when the last item is ticked.
 const BURST = 14;
@@ -95,28 +86,21 @@ export function BuildPlan({ tasks, onCopy, copying, copied, onQuestions, saveAs,
   useEffect(() => onLeft?.(tasks.length - finished), [onLeft, tasks.length, finished]);
 
   const share = (finished / Math.max(tasks.length, 1)) * 100;
-  const rank = complete ? "Ready to build" : [...RANKS].reverse().find(([from]) => share / 100 >= from)?.[1];
 
   return (
     <section className="card build" id="build">
       <header className="build__head">
         <h2>Build it</h2>
         <span className="build__count">
-          <span className={`build__rank ${complete ? "build__rank--top" : ""}`}>
-            <IconStarFilled size={12} aria-hidden="true" />
-            {rank}
-          </span>
           {finished} of {tasks.length}
         </span>
       </header>
       <Progress
         className="build__meter"
         value={share}
-        size="lg"
-        radius="xl"
+        size="sm"
+        radius="sm"
         color={complete ? "runs" : "forest"}
-        striped={!complete}
-        animated={!complete && finished > 0}
         transitionDuration={300}
         aria-label="Build progress"
       />

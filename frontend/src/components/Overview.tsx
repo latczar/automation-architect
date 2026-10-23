@@ -1,5 +1,5 @@
 import { Button, RingProgress, ThemeIcon } from "@mantine/core";
-import { IconChevronRight, IconTrophy } from "@tabler/icons-react";
+import { IconChevronRight, IconShieldCheck } from "@tabler/icons-react";
 
 import { VERDICT_COLOR, VERDICT_ORDER } from "../labels";
 import type { AutomationPlan, ProcessGraph, Verdict } from "../types";
@@ -15,9 +15,9 @@ interface Props {
 const RUNNABLE: Verdict[] = ["fully_automatable", "automatable_with_control"];
 
 const SAYS: Record<Verdict, [string, string]> = {
-  fully_automatable: ["runs itself", "run themselves"],
-  automatable_with_control: ["needs a guard", "need a guard"],
-  human_required: ["stays with you", "stay with you"],
+  fully_automatable: ["automated", "automated"],
+  automatable_with_control: ["needs approval", "need approval"],
+  human_required: ["manual", "manual"],
   needs_more_info: ["unclear", "unclear"],
 };
 
@@ -68,10 +68,10 @@ export function Overview({ graph, plan, onPick }: Props) {
               <strong>
                 {count("fully_automatable")}/{plan.assessments.length}
               </strong>
-              <span>hands-off</span>
+              <span>automated</span>
             </div>
           }
-          aria-label={`${count("fully_automatable")} of ${plan.assessments.length} steps run themselves`}
+          aria-label={`${count("fully_automatable")} of ${plan.assessments.length} steps automated`}
           role="img"
         />
 
@@ -80,7 +80,7 @@ export function Overview({ graph, plan, onPick }: Props) {
             const Pictured = VERDICT_ICON[verdict];
             return (
               <li key={verdict} className={`stat stat--${verdict}`}>
-                <ThemeIcon size={26} radius="xl" variant="light" color={VERDICT_COLOR[verdict]}>
+                <ThemeIcon size={22} radius="sm" variant="transparent" color={VERDICT_COLOR[verdict]}>
                   <Pictured size={15} stroke={2} />
                 </ThemeIcon>
                 <strong>{n}</strong> {SAYS[verdict][n === 1 ? 0 : 1]}
@@ -97,20 +97,17 @@ export function Overview({ graph, plan, onPick }: Props) {
           {caught > 0 && firstCaught && (
             <Button
               size="compact-sm"
-              radius="xl"
-              variant="light"
-              color="guard"
-              leftSection={<IconTrophy size={15} />}
+              variant="default"
+              leftSection={<IconShieldCheck size={15} />}
               onClick={() => onPick(firstCaught)}
               title="Where the code overruled the model. Click to see the first one."
             >
-              {caught} caught by our checks
+              {caught} flagged by safety rules
             </Button>
           )}
           {startWith && (
             <Button
               size="compact-sm"
-              radius="xl"
               variant="default"
               rightSection={<IconChevronRight size={14} />}
               onClick={() => onPick(startWith.id)}

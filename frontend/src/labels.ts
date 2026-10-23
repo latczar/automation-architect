@@ -4,13 +4,13 @@ import type { Verdict } from "./types";
  * One wording for each verdict, wherever a verdict is named.
  *
  * The key on the first screen, the diagram and the verdict list used to carry
- * their own copies, and a reader who learns "needs a guard" from the key should
+ * their own copies, and a reader who learns "needs approval" from the key should
  * find exactly those words on the step.
  */
 export const VERDICT_LABEL: Record<Verdict, string> = {
-  fully_automatable: "Runs itself",
-  automatable_with_control: "Needs a guard",
-  human_required: "Stays with you",
+  fully_automatable: "Automated",
+  automatable_with_control: "Needs approval",
+  human_required: "Manual",
   needs_more_info: "Unclear",
 };
 
